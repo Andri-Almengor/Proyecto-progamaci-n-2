@@ -1,4 +1,4 @@
-name: Build Java web app
+name: Build and test Java web app
 on:
   push:
     branches: [main, 'feat/**']
@@ -9,6 +9,19 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_password
+          MYSQL_DATABASE: torneos
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,7 +31,14 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Initialize MySQL schema
+        run: docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -pci_password < database/torneos.sql
       - name: Compile, test and package
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          DB_USER: root
+          DB_PASSWORD: ci_password
+          RUN_DB_TESTS: 'true'
         run: mvn --batch-mode --no-transfer-progress clean verify
       - name: Check WAR
         run: test -f target/BracketArena.war
