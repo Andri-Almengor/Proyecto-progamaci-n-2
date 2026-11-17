@@ -1,4 +1,4 @@
-# 🏆 Bracket Arena — Sistema de Gestión de Torneos Eliminatorios
+# Bracket Arena — Sistema de Gestión de Torneos Eliminatorios
 
 Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrativo y cuadro eliminatorio visual, responsivo y animado. Adaptada de la plantilla original CRUD en NetBeans.
 
