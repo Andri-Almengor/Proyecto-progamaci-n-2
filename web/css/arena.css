@@ -116,3 +116,6 @@
 .report-metrics,.report-timeline{padding:16px}.report-disclaimer{padding:12px;gap:8px}.sim-all-control{align-items:stretch}
 }
 @media(prefers-reduced-motion:reduce){.pitch-ball{animation:none}}
+
+.report-next-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:600px){.report-next-controls{flex-direction:column;align-items:stretch}.report-next-controls>*{width:100%}}

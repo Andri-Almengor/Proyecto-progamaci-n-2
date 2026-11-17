@@ -43,6 +43,7 @@ public final class AppServlet extends HttpServlet {
                 Store.MatchDetail detail = Store.loadMatchDetail(id);
                 if (detail == null) { res.sendError(404); return; }
                 req.setAttribute("detail", detail);
+                req.setAttribute("nextMatch", Store.nextMatchId(detail.match));
             } catch (NumberFormatException e) { res.sendError(404); return; }
             catch (SQLException e) { log("Error consultando simulación", e); res.sendError(503, "No se pudo consultar el partido"); return; }
         }
@@ -118,11 +119,12 @@ public final class AppServlet extends HttpServlet {
                     new BigDecimal(req.getParameter("prize")), selected);
                 if ("on".equals(req.getParameter("autoSimulate"))) {
                     int done = Store.simulateRemaining();
-                    flash(req, "ok", "¡Torneo simulado! Se jugaron " + done + " partidos. Los resúmenes y el campeón ya están disponibles.");
+                    target = "partido&id=" + Store.load().round(1).get(0).id + "&play=1";
+                    flash(req, "ok", "¡Torneo simulado! Elegí reproducir cada partido, saltarlo o ver directamente su resumen.");
                 } else {
                     flash(req, "ok", "¡Torneo creado! Podés simular partido a partido o ingresar los marcadores.");
                 }
-                target = "inicio";
+                if (!"on".equals(req.getParameter("autoSimulate"))) target = "inicio";
             } else if ("tournament.simulateAll".equals(action)) {
                 requireAdmin(req);
                 target = "inicio";

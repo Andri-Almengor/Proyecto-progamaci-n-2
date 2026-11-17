@@ -276,6 +276,21 @@ public final class Store {
             } catch (SQLException | RuleException | RuntimeException e) { c.rollback(); throw e; }
         }
     }
+    /** Orden natural de los 15 encuentros; sirve para navegar la simulación sin obligar a verla. */
+    public static Long nextMatchId(Match match) throws SQLException {
+        try (Connection c = DB.open();
+             PreparedStatement p = c.prepareStatement(
+               "SELECT id FROM matches WHERE tournament_id=? AND " +
+               "(round_no>? OR (round_no=? AND match_no>?)) " +
+               "ORDER BY round_no,match_no LIMIT 1")) {
+            p.setLong(1,match.tournamentId);
+            p.setInt(2,match.round); p.setInt(3,match.round); p.setInt(4,match.position);
+            try (ResultSet r = p.executeQuery()) {
+                return r.next() ? Long.valueOf(r.getLong(1)) : null;
+            }
+        }
+    }
+
     public static final class MatchDetail {
         public final Match match;
         public final MatchSimulation.Report report;

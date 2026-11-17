@@ -69,7 +69,7 @@ Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayu
 
 ## Simulación opcional y resumen deportivo
 
-- En **Crear torneo**, la casilla **Simular los 15 partidos** permite iniciar y finalizar una copa ficticia en un clic. Dejándola desactivada se conserva el flujo clásico.
+- En **Crear torneo**, la casilla **Simular los 15 partidos** permite iniciar y finalizar una copa ficticia en un clic. Al terminar abre la primera simulación, con navegación opcional a la siguiente, o salto directo al cuadro. Dejándola desactivada se conserva el flujo clásico.
 - Durante un torneo activo, el administrador puede usar **Simular automáticamente** en un partido habilitado, **Simular todos los partidos pendientes**, o ingresar los marcadores manuales.
 - Al cerrar un partido se guardan dos tiempos, porcentajes de posesión, pases, tiros, tiros a puerta, ataques peligrosos (dominio ofensivo), córners, faltas, goles con minuto y cambios con minuto. El total calcula los sumatorios de ambos tiempos.
 - La ficha de cualquier partido finalizado permite **Reproducir**, **Pausar**, **Saltar animación**, elegir **Primer tiempo**, **Segundo tiempo** o **Partido completo**. El resumen es público, incluso para el rol USUARIO, sin permiso para editar.

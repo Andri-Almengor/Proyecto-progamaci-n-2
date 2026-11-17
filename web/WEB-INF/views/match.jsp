@@ -8,6 +8,7 @@
   String nameA = match.aName == null ? "Por definir" : match.aName;
   String nameB = match.bName == null ? "Por definir" : match.bName;
   boolean completed = match.done();
+  Long nextMatch = (Long)request.getAttribute("nextMatch");
 %>
 <section class="report-page">
   <div class="report-breadcrumb">
@@ -140,7 +141,10 @@
   </section>
   <div class="report-bottom-links">
     <a class="btn-outline" href="<%=ctx%>/app?view=inicio#llaves">← Todas las llaves</a>
-    <button type="button" class="btn-neon" data-report-replay>↻ Volver a reproducir</button>
+    <div class="report-next-controls">
+      <button type="button" class="btn-outline" data-report-replay>↻ Repetir partido</button>
+      <% if (nextMatch != null) { %><a class="btn-neon" href="<%=ctx%>/app?view=partido&amp;id=<%=nextMatch%>&amp;play=1">Siguiente simulación →</a><% } else { %><a class="btn-neon" href="<%=ctx%>/app?view=inicio#llaves">🏆 Ver campeón y cuadro final ↗</a><% } %>
+    </div>
   </div>
   <% } %>
 </section>
