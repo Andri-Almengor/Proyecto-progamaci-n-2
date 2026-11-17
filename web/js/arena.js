@@ -92,10 +92,19 @@
       window.alert('La fecha de finalización no puede ser anterior a la fecha de inicio.');
       return;
     }
-    if (!window.confirm('Se sortearán los 16 equipos y las llaves quedarán bloqueadas. ¿Crear el torneo?')) event.preventDefault();
+    const auto = event.currentTarget.elements.autoSimulate?.checked;
+    const message = auto ? 'Se generarán los 15 marcadores y el campeón inmediatamente. ¿Confirmar la simulación automática completa?' : 'Se sortearán los 16 equipos y las llaves quedarán bloqueadas. ¿Crear el torneo?';
+    if (!window.confirm(message)) event.preventDefault();
   });
 
-  $$('[data-score-form]').forEach(form => form.addEventListener('submit', event => {
+
+  $('[data-simulate-confirm]').forEach(button => button.closest('form')?.addEventListener('submit', event => {
+    if (!window.confirm('Se generará un marcador definitivo con goles y estadísticas simuladas. ¿Continuar?')) event.preventDefault();
+  }));
+  $('[data-simulate-all-confirm]')?.addEventListener('submit', event => {
+    if (!window.confirm('Esto resolverá TODOS los partidos pendientes y determinará al campeón. ¿Simular el resto del torneo?')) event.preventDefault();
+  });
+  $('[data-score-form]').forEach(form => form.addEventListener('submit', event => {
     const a = Number(form.elements.scoreA.value);
     const b = Number(form.elements.scoreB.value);
     if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a > 999 || b > 999) {
@@ -138,4 +147,116 @@
       banner.appendChild(piece);
     }
   }
+})();
+
+
+/* Reportes de simulación: visualización opcional, sin mutar el marcador real. */
+(() => {
+  'use strict';
+  const root = document.querySelector('[data-match-playback]');
+  if (!root) return;
+  const by = (selector, area=document) => area.querySelector(selector);
+  const all = (selector, area=document) => Array.from(area.querySelectorAll(selector));
+  const playButton = by('[data-play-toggle]', root);
+  const skipButton = by('[data-play-skip]', root);
+  const replayButton = by('[data-report-replay]');
+  const minuteLabel = by('[data-play-minute]', root);
+  const firstScore = by('[data-play-a]', root);
+  const secondScore = by('[data-play-b]', root);
+  const periodLabel = by('[data-play-period]', root);
+  const narration = by('[data-play-narration]', root);
+  const progress = by('[data-play-progress]', root);
+  const events = all('[data-event]');
+  const tabs = all('[data-period-tab]');
+  const panels = all('[data-period-panel]');
+  const fullScoreA = events.filter(e=>e.dataset.kind==='GOL' && e.dataset.side==='A').length;
+  const fullScoreB = events.filter(e=>e.dataset.kind==='GOL' && e.dataset.side==='B').length;
+  const speed = 400; // 90 minutos en 36 segundos, con controles para saltar.
+  let minute = 90, timer = null, playing = false;
+  let activePeriod = 3;
+  function choosePeriod(period) {
+    activePeriod = period;
+    tabs.forEach(t => {
+      const active = Number(t.dataset.periodTab)===period;
+      t.classList.toggle('active',active);
+      t.setAttribute('aria-selected',String(active));
+    });
+    panels.forEach(p => p.hidden=Number(p.dataset.periodPanel)!==period);
+    showEvents();
+  }
+  function showEvents() {
+    events.forEach(e=>{
+      const fitsPeriod = activePeriod===3 || Number(e.dataset.half)===activePeriod;
+      e.hidden = !fitsPeriod || (playing && Number(e.dataset.minute)>minute);
+    });
+  }
+  function update() {
+    minuteLabel.textContent = String(minute).padStart(2,'0');
+    const elapsed = events.filter(e=>e.dataset.kind==='GOL' && Number(e.dataset.minute)<=minute);
+    firstScore.textContent = String(elapsed.filter(e=>e.dataset.side==='A').length);
+    secondScore.textContent = String(elapsed.filter(e=>e.dataset.side==='B').length);
+    progress.style.width = String(minute/90*100)+'%';
+    if (minute===0) periodLabel.textContent='COMIENZA EL PARTIDO';
+    else if (minute<=45) periodLabel.textContent='PRIMER TIEMPO';
+    else if (minute<90) periodLabel.textContent='SEGUNDO TIEMPO';
+    else periodLabel.textContent='FINAL DEL PARTIDO';
+    showEvents();
+  }
+  function pause() {
+    clearInterval(timer); timer=null; playing=false;
+    playButton.textContent='▶ Continuar simulación';
+    showEvents();
+  }
+  function finish() {
+    pause();
+    minute=90;
+    update();
+    firstScore.textContent=String(fullScoreA);
+    secondScore.textContent=String(fullScoreB);
+    choosePeriod(3);
+    playButton.textContent='↻ Reproducir de nuevo';
+    narration.textContent='Fin del partido. Elegí primer tiempo, segundo tiempo o partido completo para analizarlo.';
+  }
+  function start(reset) {
+    if (timer) return;
+    if (reset || minute>=90) {
+      minute=0;
+      narration.textContent='¡Rueda la pelota! Seguimos los momentos más importantes del encuentro.';
+    }
+    playing=true;
+    choosePeriod(minute<=45?1:2);
+    update();
+    playButton.textContent='Ⅱ Pausar';
+    timer=setInterval(()=>{
+      minute=Math.min(90,minute+1);
+      if (minute===46) choosePeriod(2);
+      const now=events.filter(e=>Number(e.dataset.minute)===minute);
+      if (now.length) {
+        const current=now[now.length-1];
+        narration.textContent=current.dataset.kind==='GOL'
+          ? '¡GOOOL! '+current.dataset.team+' marca en el minuto '+minute+'.'
+          : current.dataset.team+' realiza una sustitución en el minuto '+minute+'.';
+        now.forEach(e=>{e.classList.add('event-highlight');setTimeout(()=>e.classList.remove('event-highlight'),1600);});
+      } else if (minute===46) narration.textContent='Comienza el segundo tiempo.';
+      update();
+      if(minute>=90) finish();
+    },speed);
+  }
+  playButton.addEventListener('click',()=>timer?pause():start(minute>=90));
+  skipButton.addEventListener('click',()=>{
+    finish();
+    document.querySelector('#estadisticas')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  replayButton?.addEventListener('click',()=>{
+    root.scrollIntoView({behavior:'smooth',block:'center'});start(true);
+  });
+  tabs.forEach(tab=>tab.addEventListener('click',()=>{
+    if(timer) pause(); // Permite inspeccionar libremente cada período.
+    choosePeriod(Number(tab.dataset.periodTab));
+  }));
+  minute=90;
+  update();
+  choosePeriod(3);
+  narration.textContent='Reproducí los momentos destacados o consultá directamente las estadísticas.';
+  if (root.dataset.autoPlay==='true' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) start(true);
 })();

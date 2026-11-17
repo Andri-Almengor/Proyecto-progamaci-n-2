@@ -69,6 +69,15 @@
       <% } %>
     </div>
   </div>
+  <% if (active && signedIn != null && signedIn.admin()) { %>
+  <form class="sim-all-control" method="post" action="<%=ctx%>/app" data-simulate-all-confirm>
+    <input type="hidden" name="csrf" value="<%=Web.esc(token)%>">
+    <input type="hidden" name="action" value="tournament.simulateAll">
+    <span>¿Querés terminar todas las llaves con resultados simulados?</span>
+    <button class="btn-outline btn-small" type="submit">⚡ Simular todos los partidos pendientes</button>
+  </form>
+  <% } %>
+  <p class="sim-disclaimer">ℹ Los informes incluyen estadísticas y cronologías ficticias generadas para fines demostrativos, no mediciones reales.</p>
   <div class="bracket-toolbar">
     <div class="legend"><span><i class="legend-dot dot-done"></i> Finalizado</span><span><i class="legend-dot dot-upcoming"></i> Por jugar</span><span>🏆 Campeón</span></div>
     <span class="scroll-tip">Deslizá para ver todas las rondas <span>→</span></span>
@@ -108,7 +117,19 @@
               <% if (done && match.winnerId.equals(match.bId)) { %><span class="winner-icon">✦</span><% } %>
               <strong class="match-score"><%=done ? match.scoreB : "—"%></strong>
             </div>
+            <% if (done) { %>
+            <div class="match-report-links">
+              <a href="<%=ctx%>/app?view=partido&amp;id=<%=match.id%>&amp;play=1">▶ Ver simulación</a>
+              <a href="<%=ctx%>/app?view=partido&amp;id=<%=match.id%>">Estadísticas ↗</a>
+            </div>
+            <% } %>
             <% if (ready && signedIn != null && signedIn.admin()) { %>
+            <form action="<%=ctx%>/app" method="post" class="match-auto-form">
+              <input type="hidden" name="csrf" value="<%=Web.esc(token)%>">
+              <input type="hidden" name="action" value="match.simulate">
+              <input type="hidden" name="matchId" value="<%=match.id%>">
+              <button type="submit" class="match-simulate-button" data-simulate-confirm>⚡ Simular automáticamente</button>
+            </form>
             <details class="score-editor">
               <summary>Registrar resultado <span>＋</span></summary>
               <form action="<%=ctx%>/app" method="post" data-score-form>
