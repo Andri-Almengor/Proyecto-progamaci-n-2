@@ -30,7 +30,7 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
    - DB_USER: root (valor local predeterminado; preferible usar usuario MySQL con permisos específicos)
    - DB_PASSWORD: contraseña del MySQL local (valor predeterminado vacío)
 4. Abrí el directorio como proyecto en NetBeans, elegí Tomcat, y ejecutá **Clean and Build** / **Run**.
-5. Entrá a la URL desplegada, por ejemplo http://localhost:8080/WebApplication1/app
+5. Entrá a la URL desplegada, por ejemplo http://localhost:8080/BracketArena/app
 
 **Administrador de prueba**: admin@torneo.local / AdminExamen2026! (solo uso académico; cambiá la contraseña antes de publicar). Los registros nuevos siempre son USUARIO; únicamente ADMIN administra aprobaciones, crea torneos y registra marcadores.
 
@@ -63,4 +63,5 @@ Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayu
 - Las llaves de un torneo iniciado no se pueden reorganizar ni cambiar de equipo.
 - Se permite crear un torneo nuevo cuando el anterior ya terminó. Los anteriores permanecen en MySQL como historial, pero la interfaz muestra el más reciente.
 - Si se muestra la advertencia de conexión, verificá que MySQL esté iniciado y que el script se haya ejecutado.
+- El proyecto también incluye un archivo pom.xml opcional para compilación con Maven y validación automática en GitHub Actions.
 - No se puede ejecutar un motor MySQL dentro de GitHub Pages: para probar el sistema es necesario Tomcat + MySQL.
