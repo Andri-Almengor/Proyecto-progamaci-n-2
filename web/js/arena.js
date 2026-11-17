@@ -21,6 +21,12 @@
     input.type = input.type === 'password' ? 'text' : 'password';
   });
 
+  // Si una URL externa falla, conservamos el monograma en vez del icono de imagen rota.
+  $('.mini-shield img, .team-card-shield img').forEach(img => {
+    img.addEventListener('error', () => img.remove());
+    if (img.complete && img.naturalWidth === 0) img.remove();
+  });
+
   const search = $('[data-team-search]');
   const filter = $('[data-team-filter]');
   const cards = $$('[data-team-name]');

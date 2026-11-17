@@ -16,7 +16,7 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
 
 ## Requisitos
 
-- JDK 17 o superior (recomendado JDK 21)
+- JDK 21 o superior
 - Apache NetBeans con Java Web y Apache Tomcat **10.1 u 11** (Jakarta Servlet)
 - MySQL 8 o superior
 - Controlador JDBC ya incluido en lib/

@@ -130,7 +130,7 @@
       <div class="round-header"><span class="round-step">05</span><div><strong>CAMPEÓN</strong><small>EL GANADOR</small></div></div>
       <div class="champion-pedestal <%=finished ? "has-champion" : ""%>">
         <span class="pedestal-shine"></span><div class="pedestal-cup">🏆</div>
-        <span class="eyebrow"><%=finished ? "CAMPEÓN 2026" : "EN DISPUTA"%></span>
+        <span class="eyebrow"><%=finished ? "CAMPEÓN " + tournament.end.getYear() : "EN DISPUTA"%></span>
         <strong><%=finished ? Web.esc(tournament.championName) : "¿QUIÉN SERÁ?"%></strong>
         <small><%=finished ? "LEYENDA DE LA ARENA" : "LA GLORIA TE ESPERA"%></small>
       </div>
