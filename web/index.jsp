@@ -1,4 +1,2 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%
-    response.sendRedirect(request.getContextPath() + "/productos");
-%>
+<% response.sendRedirect(request.getContextPath() + "/app"); %>

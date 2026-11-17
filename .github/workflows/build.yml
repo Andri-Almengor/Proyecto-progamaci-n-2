@@ -1,0 +1,75 @@
+name: Build and test Java web app
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_password
+          MYSQL_DATABASE: torneos
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Initialize MySQL schema
+        run: docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -pci_password < database/torneos.sql
+      - name: Compile, test and package
+        env:
+          DB_URL: jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          DB_USER: root
+          DB_PASSWORD: ci_password
+          RUN_DB_TESTS: 'true'
+        run: mvn --batch-mode --no-transfer-progress clean verify
+      - name: Check WAR
+        run: test -f target/BracketArena.war
+      - name: Deploy WAR and smoke-test JSP in Tomcat 11
+        run: |
+          docker run -d --rm --name bracket-arena-smoke --network host \
+            -e 'DB_URL=jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC' \
+            -e 'DB_USER=root' -e 'DB_PASSWORD=ci_password' \
+            -v "${PWD}/target/BracketArena.war:/usr/local/tomcat/webapps/BracketArena.war:ro" \
+            tomcat:11.0-jdk21-temurin
+          trap 'docker logs bracket-arena-smoke || true; docker stop bracket-arena-smoke || true' EXIT
+          base='http://127.0.0.1:8080/BracketArena/app'
+          ready=0
+          for n in $(seq 1 60); do
+            if curl -fsS "$base?view=inicio" -o /tmp/bracket-home.html 2>/dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = "1"
+          grep -q 'Cuadro' /tmp/bracket-home.html
+          for page in equipos login registro; do
+            curl -fsS "$base?view=$page" -o "/tmp/bracket-$page.html"
+          done
+          curl -fsS -c /tmp/bracket-cookies -b /tmp/bracket-cookies "$base?view=login" -o /tmp/bracket-login.html
+          csrf=$(grep -o 'name="csrf" value="[^"]*"' /tmp/bracket-login.html | head -1 | cut -d '"' -f4)
+          test -n "$csrf"
+          curl -fsSL -c /tmp/bracket-cookies -b /tmp/bracket-cookies \
+            --data-urlencode "csrf=$csrf" \
+            --data-urlencode "action=login" \
+            --data-urlencode "email=admin@torneo.local" \
+            --data-urlencode "password=AdminExamen2026!" \
+            "$base" -o /tmp/bracket-authenticated.html
+          grep -q 'Bienvenido' /tmp/bracket-authenticated.html
+          curl -fsS -b /tmp/bracket-cookies "$base?view=admin" -o /tmp/bracket-admin.html
+          grep -q 'Aprobar equipos' /tmp/bracket-admin.html

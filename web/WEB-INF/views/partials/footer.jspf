@@ -1,0 +1,11 @@
+</main>
+<footer class="site-footer">
+  <div class="footer-content">
+    <a class="brand" href="<%=ctx%>/app?view=inicio"><span class="brand-symbol">✦</span> BRACKET<span class="brand-accent">ARENA</span></a>
+    <p>Donde cada partido cuenta. Una sola corona.</p>
+    <small>Proyecto académico · Java JSP + Servlets + MySQL</small>
+  </div>
+</footer>
+<script src="<%=ctx%>/js/arena.js" defer></script>
+</body>
+</html>
