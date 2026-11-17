@@ -276,65 +276,179 @@ public final class Store {
             } catch (SQLException | RuleException | RuntimeException e) { c.rollback(); throw e; }
         }
     }
-    public static void recordScore(long matchId, int scoreA, int scoreB) throws SQLException, RuleException {
-        if (scoreA < 0 || scoreB < 0 || scoreA > 999 || scoreB > 999) throw new RuleException("Los marcadores deben estar entre 0 y 999.");
-        if (scoreA == scoreB) throw new RuleException("Los empates no están permitidos en eliminación directa.");
+    public static final class MatchDetail {
+        public final Match match;
+        public final MatchSimulation.Report report;
+        MatchDetail(Match match, MatchSimulation.Report report) {
+            this.match = match; this.report = report;
+        }
+    }
+
+    /** Reportes públicos: disponibles para jugadores, visitantes y administradores. */
+    public static MatchDetail loadMatchDetail(long matchId) throws SQLException {
+        if (matchId <= 0) return null;
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
             try {
-                long tournamentId, teamA, teamB;
-                int round, pos;
-                String status;
-                try (PreparedStatement p = c.prepareStatement("SELECT tournament_id FROM matches WHERE id=?")) {
+                Match match = null;
+                try (PreparedStatement p = c.prepareStatement(
+                    "SELECT m.*, a.name a_name, b.name b_name, a.shield_url a_shield, b.shield_url b_shield " +
+                    "FROM matches m LEFT JOIN teams a ON a.id=m.team_a_id " +
+                    "LEFT JOIN teams b ON b.id=m.team_b_id WHERE m.id=? FOR UPDATE")) {
                     p.setLong(1, matchId);
                     try (ResultSet r = p.executeQuery()) {
-                        if (!r.next()) throw new RuleException("El partido no existe.");
-                        tournamentId = r.getLong(1);
+                        if (r.next()) match = new Match(r);
                     }
                 }
-                try (PreparedStatement p = c.prepareStatement("SELECT status FROM tournaments WHERE id=? FOR UPDATE")) {
-                    p.setLong(1, tournamentId);
-                    try (ResultSet r = p.executeQuery()) {
-                        if (!r.next() || !"ACTIVO".equals(r.getString(1)))
-                            throw new RuleException("El torneo no está activo.");
-                    }
-                }
-                try (PreparedStatement p = c.prepareStatement(
-                    "SELECT round_no, match_no, team_a_id, team_b_id, status FROM matches WHERE id=? FOR UPDATE")) {
-                    p.setLong(1, matchId);
-                    try (ResultSet r = p.executeQuery()) {
-                        r.next();
-                        round = r.getInt(1); pos = r.getInt(2);
-                        teamA = r.getLong(3); boolean hasA = !r.wasNull();
-                        teamB = r.getLong(4); boolean hasB = !r.wasNull();
-                        status = r.getString(5);
-                        if (!hasA || !hasB) throw new RuleException("El partido todavía no tiene ambos clasificados.");
-                        if (!"PENDIENTE".equals(status)) throw new RuleException("Este resultado ya fue registrado y no puede editarse.");
-                    }
-                }
-                long winner = scoreA > scoreB ? teamA : teamB;
-                try (PreparedStatement p = c.prepareStatement(
-                    "UPDATE matches SET score_a=?, score_b=?, winner_id=?, status='FINALIZADO', played_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDIENTE'")) {
-                    p.setInt(1, scoreA); p.setInt(2, scoreB); p.setLong(3, winner); p.setLong(4, matchId);
-                    if (p.executeUpdate() != 1) throw new RuleException("El resultado ya había sido registrado.");
-                }
-                if (round == 4) {
-                    try (PreparedStatement p = c.prepareStatement(
-                        "UPDATE tournaments SET champion_team_id=?, status='FINALIZADO', active_slot=NULL WHERE id=? AND status='ACTIVO'")) {
-                        p.setLong(1, winner); p.setLong(2, tournamentId);
-                        if (p.executeUpdate() != 1) throw new RuleException("No se pudo finalizar el torneo.");
-                    }
-                } else {
-                    String slot = pos % 2 == 1 ? "team_a_id" : "team_b_id";
-                    String sql = "UPDATE matches SET " + slot + "=? WHERE tournament_id=? AND round_no=? AND match_no=? AND " + slot + " IS NULL";
-                    try (PreparedStatement p = c.prepareStatement(sql)) {
-                        p.setLong(1, winner); p.setLong(2, tournamentId);
-                        p.setInt(3, round + 1); p.setInt(4, (pos + 1) / 2);
-                        if (p.executeUpdate() != 1) throw new RuleException("El siguiente enfrentamiento no está disponible.");
+                if (match == null) { c.commit(); return null; }
+                MatchSimulation.Report report = null;
+                if (match.done()) {
+                    report = MatchSimulation.read(c, matchId);
+                    if (report == null) {
+                        // Permite consultar partidos jugados antes de instalar esta mejora.
+                        // El informe reconstruido se distingue explícitamente del registro original.
+                        report = MatchSimulation.generate(match.scoreA, match.scoreB, "RECONSTRUIDA");
+                        MatchSimulation.save(c, matchId, report);
                     }
                 }
                 c.commit();
-            } catch (SQLException | RuleException | RuntimeException e) { c.rollback(); throw e; }
+                return new MatchDetail(match, report);
+            } catch (SQLException | RuntimeException ex) {
+                c.rollback(); throw ex;
+            }
+        }
+    }
+
+    public static void recordScore(long matchId, int scoreA, int scoreB) throws SQLException, RuleException {
+        try (Connection c = DB.open()) {
+            c.setAutoCommit(false);
+            try {
+                finishMatch(c, matchId, scoreA, scoreB, "MANUAL");
+                c.commit();
+            } catch (SQLException | RuleException | RuntimeException ex) {
+                c.rollback(); throw ex;
+            }
+        }
+    }
+
+    /** El administrador simula un encuentro individual y registra su resultado automáticamente. */
+    public static void simulateMatch(long matchId) throws SQLException, RuleException {
+        try (Connection c = DB.open()) {
+            c.setAutoCommit(false);
+            try {
+                int[] scores = randomScore();
+                finishMatch(c, matchId, scores[0], scores[1], "AUTOMATICA");
+                c.commit();
+            } catch (SQLException | RuleException | RuntimeException ex) {
+                c.rollback(); throw ex;
+            }
+        }
+    }
+
+    /** Simula todos los encuentros restantes en orden y en una sola transacción. */
+    public static int simulateRemaining() throws SQLException, RuleException {
+        try (Connection c = DB.open()) {
+            c.setAutoCommit(false);
+            try {
+                lockCoordinator(c);
+                int total = 0;
+                while (true) {
+                    Long matchId = null;
+                    try (PreparedStatement p = c.prepareStatement(
+                        "SELECT m.id FROM matches m JOIN tournaments t ON t.id=m.tournament_id " +
+                        "WHERE t.status='ACTIVO' AND m.status='PENDIENTE' " +
+                        "AND m.team_a_id IS NOT NULL AND m.team_b_id IS NOT NULL " +
+                        "ORDER BY m.round_no,m.match_no LIMIT 1")) {
+                        try (ResultSet r = p.executeQuery()) {
+                            if (r.next()) matchId = r.getLong(1);
+                        }
+                    }
+                    if (matchId == null) break;
+                    int[] scores = randomScore();
+                    finishMatch(c, matchId, scores[0], scores[1], "AUTOMATICA");
+                    total++;
+                    if (total > 15) throw new SQLException("Se excedió el número máximo de partidos.");
+                }
+                if (total == 0) throw new RuleException("No hay encuentros pendientes para simular.");
+                c.commit();
+                return total;
+            } catch (SQLException | RuleException | RuntimeException ex) {
+                c.rollback(); throw ex;
+            }
+        }
+    }
+
+    private static int[] randomScore() {
+        int a = RANDOM.nextInt(5), b = RANDOM.nextInt(5);
+        if (a == b) b = (b + 1) % 5;
+        return new int[]{a, b};
+    }
+
+    /** Único punto de escritura de resultados, ya sean manuales o simulados. */
+    private static void finishMatch(Connection c, long matchId, int scoreA, int scoreB, String mode)
+            throws SQLException, RuleException {
+        if (scoreA < 0 || scoreB < 0 || scoreA > 999 || scoreB > 999)
+            throw new RuleException("Los marcadores deben estar entre 0 y 999.");
+        if (scoreA == scoreB)
+            throw new RuleException("Los empates no están permitidos en eliminación directa.");
+        long tournamentId, teamA, teamB;
+        int round, pos;
+        String status;
+        try (PreparedStatement p = c.prepareStatement("SELECT tournament_id FROM matches WHERE id=?")) {
+            p.setLong(1, matchId);
+            try (ResultSet r = p.executeQuery()) {
+                if (!r.next()) throw new RuleException("El partido no existe.");
+                tournamentId = r.getLong(1);
+            }
+        }
+        try (PreparedStatement p = c.prepareStatement("SELECT status FROM tournaments WHERE id=? FOR UPDATE")) {
+            p.setLong(1, tournamentId);
+            try (ResultSet r = p.executeQuery()) {
+                if (!r.next() || !"ACTIVO".equals(r.getString(1)))
+                    throw new RuleException("El torneo no está activo.");
+            }
+        }
+        try (PreparedStatement p = c.prepareStatement(
+            "SELECT round_no, match_no, team_a_id, team_b_id, status FROM matches WHERE id=? FOR UPDATE")) {
+            p.setLong(1, matchId);
+            try (ResultSet r = p.executeQuery()) {
+                if (!r.next()) throw new RuleException("El partido no existe.");
+                round = r.getInt(1); pos = r.getInt(2);
+                teamA = r.getLong(3); boolean hasA = !r.wasNull();
+                teamB = r.getLong(4); boolean hasB = !r.wasNull();
+                status = r.getString(5);
+                if (!hasA || !hasB)
+                    throw new RuleException("El partido todavía no tiene ambos clasificados.");
+                if (!"PENDIENTE".equals(status))
+                    throw new RuleException("Este resultado ya fue registrado y no puede editarse.");
+            }
+        }
+        long winner = scoreA > scoreB ? teamA : teamB;
+        try (PreparedStatement p = c.prepareStatement(
+            "UPDATE matches SET score_a=?, score_b=?, winner_id=?, status='FINALIZADO', " +
+            "played_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDIENTE'")) {
+            p.setInt(1, scoreA); p.setInt(2, scoreB); p.setLong(3, winner); p.setLong(4, matchId);
+            if (p.executeUpdate() != 1) throw new RuleException("El resultado ya fue registrado.");
+        }
+        // La ficha del encuentro y su cronología se guardan atómicamente con el marcador.
+        MatchSimulation.save(c, matchId, MatchSimulation.generate(scoreA, scoreB, mode));
+        if (round == 4) {
+            try (PreparedStatement p = c.prepareStatement(
+                "UPDATE tournaments SET champion_team_id=?, status='FINALIZADO', active_slot=NULL " +
+                "WHERE id=? AND status='ACTIVO'")) {
+                p.setLong(1, winner); p.setLong(2, tournamentId);
+                if (p.executeUpdate() != 1) throw new RuleException("No se pudo finalizar el torneo.");
+            }
+        } else {
+            String slot = pos % 2 == 1 ? "team_a_id" : "team_b_id";
+            String sql = "UPDATE matches SET " + slot +
+                "=? WHERE tournament_id=? AND round_no=? AND match_no=? AND " + slot + " IS NULL";
+            try (PreparedStatement p = c.prepareStatement(sql)) {
+                p.setLong(1, winner); p.setLong(2, tournamentId);
+                p.setInt(3, round + 1); p.setInt(4, (pos + 1) / 2);
+                if (p.executeUpdate() != 1)
+                    throw new RuleException("El siguiente enfrentamiento no está disponible.");
+            }
         }
     }
 }
