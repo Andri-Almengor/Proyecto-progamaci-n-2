@@ -3,6 +3,10 @@
 CREATE DATABASE IF NOT EXISTS torneos CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE torneos;
 
+-- Candado transaccional para garantizar cupo de 16 e inscripción coherente.
+CREATE TABLE IF NOT EXISTS system_lock (lock_id TINYINT UNSIGNED PRIMARY KEY) ENGINE=InnoDB;
+INSERT IGNORE INTO system_lock (lock_id) VALUES (1);
+
 CREATE TABLE IF NOT EXISTS users (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
  full_name VARCHAR(120) NOT NULL,

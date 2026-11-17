@@ -10,6 +10,13 @@ import java.security.SecureRandom;
 public final class Store {
     private Store() {}
     private static final SecureRandom RANDOM = new SecureRandom();
+    /** Serializa las aprobaciones, inscripciones y la creación del torneo. */
+    private static void lockCoordinator(Connection c) throws SQLException {
+        try (PreparedStatement p = c.prepareStatement("SELECT lock_id FROM system_lock WHERE lock_id=1 FOR UPDATE");
+             ResultSet r = p.executeQuery()) {
+            if (!r.next()) throw new SQLException("Falta la fila de control del torneo en MySQL.");
+        }
+    }
     public static final class RuleException extends Exception {
         public RuleException(String message) { super(message); }
     }
@@ -171,6 +178,7 @@ public final class Store {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
             try {
+                lockCoordinator(c);
                 try (PreparedStatement p = c.prepareStatement("SELECT id FROM tournaments WHERE status='ACTIVO' LIMIT 1 FOR UPDATE");
                      ResultSet r = p.executeQuery()) {
                     if (r.next()) throw new RuleException("Las inscripciones están cerradas durante un torneo activo.");
@@ -189,6 +197,7 @@ public final class Store {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
             try {
+                lockCoordinator(c);
                 try (PreparedStatement p = c.prepareStatement("SELECT id FROM tournaments WHERE status='ACTIVO' LIMIT 1 FOR UPDATE");
                      ResultSet r = p.executeQuery()) {
                     if (r.next()) throw new RuleException("No se puede modificar la aprobación durante el torneo.");
@@ -226,6 +235,7 @@ public final class Store {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
             try {
+                lockCoordinator(c);
                 try (PreparedStatement p = c.prepareStatement("SELECT id FROM tournaments WHERE status='ACTIVO' LIMIT 1 FOR UPDATE");
                      ResultSet r = p.executeQuery()) {
                     if (r.next()) throw new RuleException("Ya existe un torneo activo.");
