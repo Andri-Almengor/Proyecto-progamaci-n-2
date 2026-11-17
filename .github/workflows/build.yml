@@ -42,3 +42,34 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress clean verify
       - name: Check WAR
         run: test -f target/BracketArena.war
+      - name: Deploy WAR and smoke-test JSP in Tomcat 11
+        run: |
+          docker run -d --rm --name bracket-arena-smoke --network host \
+            -e 'DB_URL=jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC' \
+            -e 'DB_USER=root' -e 'DB_PASSWORD=ci_password' \
+            -v "${PWD}/target/BracketArena.war:/usr/local/tomcat/webapps/BracketArena.war:ro" \
+            tomcat:11.0-jdk21-temurin
+          trap 'docker logs bracket-arena-smoke || true; docker stop bracket-arena-smoke || true' EXIT
+          base='http://127.0.0.1:8080/BracketArena/app'
+          ready=0
+          for n in $(seq 1 60); do
+            if curl -fsS "$base?view=inicio" -o /tmp/bracket-home.html 2>/dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = "1"
+          grep -q 'Cuadro' /tmp/bracket-home.html
+          for page in equipos login registro; do
+            curl -fsS "$base?view=$page" -o "/tmp/bracket-$page.html"
+          done
+          curl -fsS -c /tmp/bracket-cookies -b /tmp/bracket-cookies "$base?view=login" -o /tmp/bracket-login.html
+          csrf=$(grep -o 'name="csrf" value="[^"]*"' /tmp/bracket-login.html | head -1 | cut -d '"' -f4)
+          test -n "$csrf"
+          curl -fsSL -c /tmp/bracket-cookies -b /tmp/bracket-cookies \
+            --data-urlencode "csrf=$csrf" \
+            --data-urlencode "action=login" \
+            --data-urlencode "email=admin@torneo.local" \
+            --data-urlencode "password=AdminExamen2026!" \
+            "$base" -o /tmp/bracket-authenticated.html
+          grep -q 'Bienvenido' /tmp/bracket-authenticated.html
+          curl -fsS -b /tmp/bracket-cookies "$base?view=admin" -o /tmp/bracket-admin.html
+          grep -q 'Aprobar equipos' /tmp/bracket-admin.html
