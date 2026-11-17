@@ -73,3 +73,27 @@ jobs:
           grep -q 'Bienvenido' /tmp/bracket-authenticated.html
           curl -fsS -b /tmp/bracket-cookies "$base?view=admin" -o /tmp/bracket-admin.html
           grep -q 'Aprobar equipos' /tmp/bracket-admin.html
+
+      - name: Smoke-test public match report with statistics
+        run: |
+          base='http://127.0.0.1:8080/BracketArena/app'
+          # El paso anterior ya detuvo Tomcat, reutilizamos otro contenedor de prueba.
+          docker run -d --rm --name bracket-arena-report --network host \
+            -e 'DB_URL=jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC' \
+            -e 'DB_USER=root' -e 'DB_PASSWORD=ci_password' \
+            -v "${PWD}/target/BracketArena.war:/usr/local/tomcat/webapps/BracketArena.war:ro" \
+            tomcat:11.0-jdk21-temurin
+          trap 'docker logs bracket-arena-report || true; docker stop bracket-arena-report || true' EXIT
+          ready=0
+          for n in $(seq 1 60); do
+            if curl -fsS "$base?view=inicio" -o /tmp/bracket-main-report.html 2>/dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = "1"
+          match_id=$(grep -o 'view=partido&amp;id=[0-9]*' /tmp/bracket-main-report.html | head -1 | sed 's/.*id=//')
+          test -n "$match_id"
+          curl -fsS "$base?view=partido&id=$match_id" -o /tmp/partido-report.html
+          grep -q 'Posesión del balón' /tmp/partido-report.html
+          grep -q 'PRIMER TIEMPO' /tmp/partido-report.html
+          grep -q 'SEGUNDO TIEMPO' /tmp/partido-report.html
+          grep -q 'Saltar y ver resumen' /tmp/partido-report.html

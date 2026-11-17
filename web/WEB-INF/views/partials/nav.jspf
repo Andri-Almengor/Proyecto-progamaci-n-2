@@ -1,4 +1,4 @@
-<%@page import="com.torneo.Store,com.torneo.Web,java.util.*,java.time.*,java.math.*"%>
+<%@page import="com.torneo.Store,com.torneo.Web,com.torneo.MatchSimulation,java.util.*,java.time.*,java.math.*"%>
 <%
     Store.User signedIn = Web.user(request);
     String ctx = request.getContextPath();

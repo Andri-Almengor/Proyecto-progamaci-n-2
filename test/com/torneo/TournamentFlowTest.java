@@ -71,5 +71,34 @@ public class TournamentFlowTest {
         assertNotNull(completed.tournament.championId);
         assertEquals(completed.round(4).get(0).winnerId, completed.tournament.championId);
         assertThrows(Store.RuleException.class, () -> Store.recordScore(opening.id, 1, 0));
+        // El resultado manual genera una ficha accesible con los mismos goles.
+        Store.MatchDetail manual = Store.loadMatchDetail(opening.id);
+        assertEquals("MANUAL", manual.report.mode);
+        assertEquals(manual.match.scoreA.intValue(), manual.report.total().goalsA);
+        assertEquals(manual.match.scoreB.intValue(), manual.report.total().goalsB);
+        assertEquals(100, manual.report.first.possessionA + (100-manual.report.first.possessionA));
+
+        // Segundo torneo sobre los mismos 16 equipos: simulación completa con un clic.
+        Store.createTournament("Copa Automática " + suffix, "", LocalDate.now(),
+                LocalDate.now().plusDays(10), BigDecimal.valueOf(180000), teamIds);
+        assertEquals(15, Store.simulateRemaining());
+        Store.State automatic = Store.load();
+        assertEquals("FINALIZADO", automatic.tournament.status);
+        assertNotNull(automatic.tournament.championId);
+        assertEquals(15, automatic.finalized);
+        for (Store.Match m : automatic.matches) {
+            assertTrue(m.done());
+            Store.MatchDetail d = Store.loadMatchDetail(m.id);
+            assertNotNull(d.report);
+            assertEquals("AUTOMATICA", d.report.mode);
+            assertEquals(m.scoreA.intValue(), d.report.total().goalsA);
+            assertEquals(m.scoreB.intValue(), d.report.total().goalsB);
+            assertTrue(d.report.first.shotsA >= d.report.first.onA);
+            assertTrue(d.report.first.onA >= d.report.first.goalsA);
+            assertTrue(d.report.second.shotsB >= d.report.second.onB);
+            assertTrue(d.report.second.onB >= d.report.second.goalsB);
+            assertEquals(d.report.first.passesA + d.report.second.passesA, d.report.total().passesA);
+        }
+        assertThrows(Store.RuleException.class, Store::simulateRemaining);
     }
 }
