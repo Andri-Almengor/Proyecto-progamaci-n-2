@@ -92,10 +92,19 @@
       window.alert('La fecha de finalización no puede ser anterior a la fecha de inicio.');
       return;
     }
-    if (!window.confirm('Se sortearán los 16 equipos y las llaves quedarán bloqueadas. ¿Crear el torneo?')) event.preventDefault();
+    const auto = event.currentTarget.elements.autoSimulate?.checked;
+    const message = auto ? 'Se generarán los 15 marcadores y el campeón inmediatamente. ¿Confirmar la simulación automática completa?' : 'Se sortearán los 16 equipos y las llaves quedarán bloqueadas. ¿Crear el torneo?';
+    if (!window.confirm(message)) event.preventDefault();
   });
 
-  $$('[data-score-form]').forEach(form => form.addEventListener('submit', event => {
+
+  $('[data-simulate-confirm]').forEach(button => button.closest('form')?.addEventListener('submit', event => {
+    if (!window.confirm('Se generará un marcador definitivo con goles y estadísticas simuladas. ¿Continuar?')) event.preventDefault();
+  }));
+  $('[data-simulate-all-confirm]')?.addEventListener('submit', event => {
+    if (!window.confirm('Esto resolverá TODOS los partidos pendientes y determinará al campeón. ¿Simular el resto del torneo?')) event.preventDefault();
+  });
+  $('[data-score-form]').forEach(form => form.addEventListener('submit', event => {
     const a = Number(form.elements.scoreA.value);
     const b = Number(form.elements.scoreB.value);
     if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a > 999 || b > 999) {

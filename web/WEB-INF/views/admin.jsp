@@ -64,6 +64,7 @@
           <% if (state.approved < 16) { %><div class="notice-box">Faltan <strong><%=16-state.approved%></strong> equipos aprobados. Cuando se complete el cupo podrás crear el torneo.</div><% } %>
         </div>
         <p class="subtle">Una vez creado, los participantes y las llaves quedan bloqueados. El sorteo es aleatorio.</p>
+        <label class="auto-start-option"><input type="checkbox" name="autoSimulate" value="on"><span><strong>⚡ Simular los 15 partidos al crear el torneo</strong><small>Opcional. Se generan marcadores, estadísticas, goles y cambios; el campeón se decide inmediatamente. También podés hacerlo después, partido por partido.</small></span></label>
         <button type="submit" class="btn-neon btn-block" <%=canCreate?"":"disabled title=\"Necesitás 16 equipos aprobados\""%>>🏆 Generar las 15 llaves <span>↗</span></button>
       </form>
     <% } %>

@@ -65,3 +65,13 @@ Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayu
 - Si se muestra la advertencia de conexión, verificá que MySQL esté iniciado y que el script se haya ejecutado.
 - El proyecto también incluye un archivo pom.xml opcional para compilación con Maven y validación automática en GitHub Actions.
 - No se puede ejecutar un motor MySQL dentro de GitHub Pages: para probar el sistema es necesario Tomcat + MySQL.
+
+
+## Simulación opcional y resumen deportivo
+
+- En **Crear torneo**, la casilla **Simular los 15 partidos** permite iniciar y finalizar una copa ficticia en un clic. Dejándola desactivada se conserva el flujo clásico.
+- Durante un torneo activo, el administrador puede usar **Simular automáticamente** en un partido habilitado, **Simular todos los partidos pendientes**, o ingresar los marcadores manuales.
+- Al cerrar un partido se guardan dos tiempos, porcentajes de posesión, pases, tiros, tiros a puerta, ataques peligrosos (dominio ofensivo), córners, faltas, goles con minuto y cambios con minuto. El total calcula los sumatorios de ambos tiempos.
+- La ficha de cualquier partido finalizado permite **Reproducir**, **Pausar**, **Saltar animación**, elegir **Primer tiempo**, **Segundo tiempo** o **Partido completo**. El resumen es público, incluso para el rol USUARIO, sin permiso para editar.
+- **IMPORTANTE:** las estadísticas, los números de los jugadores, los minutos y los cambios son datos sintéticos ilustrativos. No se afirma que reflejen partidos reales; el simulador utiliza nombres genéricos «Jugador #N» porque no existen plantillas de futbolistas en la base.
+- En una base que ya ejecutó `database/torneos.sql` anteriormente, ejecutar **`database/upgrade_match_simulations.sql`** una vez antes de actualizar la aplicación. En instalaciones nuevas solo ejecutar `database/torneos.sql` actualizado. No se borran torneos anteriores; sus informes estadísticos se reconstruyen al abrirlos por primera vez y se identifican como tal.

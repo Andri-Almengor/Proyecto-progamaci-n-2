@@ -23,7 +23,7 @@ public final class AppServlet extends HttpServlet {
         String view = req.getParameter("view");
         if (view == null || view.isBlank()) view = "inicio";
         if (!("inicio".equals(view) || "equipos".equals(view) || "admin".equals(view) ||
-              "login".equals(view) || "registro".equals(view))) {
+              "login".equals(view) || "registro".equals(view) || "partido".equals(view))) {
             res.sendError(404); return;
         }
         Store.User current = Web.user(req);
@@ -37,6 +37,15 @@ public final class AppServlet extends HttpServlet {
         req.setAttribute("flashKind", s.getAttribute("flashKind"));
         s.removeAttribute("flash"); s.removeAttribute("flashKind");
         req.setAttribute("view", view);
+        if ("partido".equals(view)) {
+            try {
+                long id = Long.parseLong(req.getParameter("id"));
+                Store.MatchDetail detail = Store.loadMatchDetail(id);
+                if (detail == null) { res.sendError(404); return; }
+                req.setAttribute("detail", detail);
+            } catch (NumberFormatException e) { res.sendError(404); return; }
+            catch (SQLException e) { log("Error consultando simulación", e); res.sendError(503, "No se pudo consultar el partido"); return; }
+        }
         if (!("login".equals(view) || "registro".equals(view))) {
             try { req.setAttribute("state", Store.load()); }
             catch (SQLException ex) {
@@ -49,6 +58,7 @@ public final class AppServlet extends HttpServlet {
         switch (view) {
             case "login": case "registro": page = "auth.jsp"; break;
             case "equipos": page = "teams.jsp"; break;
+            case "partido": page = "match.jsp"; break;
             case "admin": page = "admin.jsp"; break;
             default: page = "home.jsp"; break;
         }
@@ -106,14 +116,33 @@ public final class AppServlet extends HttpServlet {
                 Store.createTournament(req.getParameter("name"), req.getParameter("image"),
                     LocalDate.parse(req.getParameter("start")), LocalDate.parse(req.getParameter("end")),
                     new BigDecimal(req.getParameter("prize")), selected);
+                if ("on".equals(req.getParameter("autoSimulate"))) {
+                    int done = Store.simulateRemaining();
+                    flash(req, "ok", "¡Torneo simulado! Se jugaron " + done + " partidos. Los resúmenes y el campeón ya están disponibles.");
+                } else {
+                    flash(req, "ok", "¡Torneo creado! Podés simular partido a partido o ingresar los marcadores.");
+                }
                 target = "inicio";
-                flash(req, "ok", "¡Torneo creado! Los 16 equipos fueron sorteados y las 15 llaves están listas.");
+            } else if ("tournament.simulateAll".equals(action)) {
+                requireAdmin(req);
+                target = "inicio";
+                int done = Store.simulateRemaining();
+                flash(req, "ok", "Se simularon " + done + " partidos. ¡Todos los resúmenes quedaron guardados!");
+            } else if ("match.simulate".equals(action)) {
+                requireAdmin(req);
+                long matchId = Long.parseLong(req.getParameter("matchId"));
+                target = "inicio";
+                Store.simulateMatch(matchId);
+                target = "partido&id=" + matchId + "&play=1";
+                flash(req, "ok", "¡Partido simulado! Podés reproducirlo, ver sus estadísticas o saltar la animación.");
             } else if ("match.result".equals(action)) {
                 requireAdmin(req);
                 target = "inicio";
-                Store.recordScore(Long.parseLong(req.getParameter("matchId")),
-                    Integer.parseInt(req.getParameter("scoreA")), Integer.parseInt(req.getParameter("scoreB")));
-                flash(req, "ok", "¡Resultado guardado! El ganador avanzó automáticamente.");
+                long matchId = Long.parseLong(req.getParameter("matchId"));
+                Store.recordScore(matchId, Integer.parseInt(req.getParameter("scoreA")),
+                    Integer.parseInt(req.getParameter("scoreB")));
+                target = "partido&id=" + matchId + "&play=1";
+                flash(req, "ok", "¡Resultado guardado! Revisá o saltá la simulación; el ganador ya avanzó.");
             } else {
                 res.sendError(400, "Acción desconocida"); return;
             }
