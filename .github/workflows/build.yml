@@ -96,7 +96,8 @@ jobs:
             sleep 2
           done
           test "$ready" = "1"
-          match_id=$(grep -o 'view=partido&amp;id=[0-9]*' /tmp/bracket-main-report.html | head -1 | sed 's/.*id=//')
+          curl -fsS 'http://127.0.0.1:8080/BracketArena/arena-data' -o /tmp/stitch-public-report.json
+          match_id=$(python3 -c 'import json; d=json.load(open("/tmp/stitch-public-report.json")); print(next((str(m["id"]) for m in d["matches"] if m["done"]), ""))')
           test -n "$match_id"
           curl -fsS "$base?view=partido&id=$match_id" -o /tmp/partido-report.html
           grep -q 'Posesión de Balón' /tmp/partido-report.html

@@ -71,7 +71,7 @@ public final class ArenaDataServlet extends HttpServlet {
             int totalGoals=0,totalFouls=0;
             for (Store.Team t : s.teams) {
                 teams.add(obj("id",t.id,"name",t.name,"shield",safe(t.shield),"status",t.status,
-                    "owner",t.owner,"phone",t.phone,"participant",s.participantIds.contains(t.id)));
+                    "owner",t.owner,"phone",user != null && (user.admin() || user.id == t.ownerId) ? t.phone : "","participant",s.participantIds.contains(t.id)));
             }
             for (Store.Match m : s.matches) {
                 Map<String,Object> match = obj("id",m.id,"round",m.round,"position",m.position,
