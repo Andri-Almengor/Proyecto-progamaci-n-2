@@ -75,3 +75,14 @@ Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayu
 - La ficha de cualquier partido finalizado permite **Reproducir**, **Pausar**, **Saltar animación**, elegir **Primer tiempo**, **Segundo tiempo** o **Partido completo**. El resumen es público, incluso para el rol USUARIO, sin permiso para editar.
 - **IMPORTANTE:** las estadísticas, los números de los jugadores, los minutos y los cambios son datos sintéticos ilustrativos. No se afirma que reflejen partidos reales; el simulador utiliza nombres genéricos «Jugador #N» porque no existen plantillas de futbolistas en la base.
 - En una base que ya ejecutó `database/torneos.sql` anteriormente, ejecutar **`database/upgrade_match_simulations.sql`** una vez antes de actualizar la aplicación. En instalaciones nuevas solo ejecutar `database/torneos.sql` actualizado. No se borran torneos anteriores; sus informes estadísticos se reconstruyen al abrirlos por primera vez y se identifican como tal.
+
+
+## Diseño Stitch Tournament Monolith (edición 2026)
+
+Las ocho vistas Java/JSP usan directamente las cuatro pantallas HTML suministradas por Stitch: inicio, cuadro simétrico, panel administrativo y simulación de partidos. Las pantallas de equipos, ingreso, registro y creación adoptan el mismo sistema visual (Space Grotesk, Inter, blanco/negro y ámbar). Los archivos fuente están en `web/WEB-INF/views/stitch-*.jsp`, el CSS local compilado (no depende de Tailwind CDN) en `web/css/stitch.css`, el estilo de skeletons en `stitch-bridge.css`, y el cliente de datos en `web/js/stitch-runtime.js`.
+
+El endpoint público de solo lectura `GET /arena-data` obtiene del servidor la edición actual, equipos, 15 partidos, resultados, informes de simulación, goleadores y faltas. Ningún dato de ejemplo se utiliza para el torneo. La tabla de goleadores identifica números de jugadores simulados. Como no existe registro de tarjetas rojas o amarillas en el esquema, esos campos muestran "Sin registro" en vez de inventar sanciones.
+
+Al entrar, las secciones se ocultan tras tarjetas skeleton con shimmer; los datos se consultan y el contenido aparece en secuencia descendente con transiciones suaves. Se respetan `prefers-reduced-motion`, navegación por teclado y permisos del administrador.
+
+**Rutas:** `/app?view=inicio`, `/app?view=cuadro`, `/app?view=equipos`, `/app?view=admin`, `/app?view=crear` (admin), `/app?view=partido&id=N`, `/app?view=login` y `/app?view=registro`.

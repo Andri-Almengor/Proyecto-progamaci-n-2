@@ -1,0 +1,101 @@
+/* Complemento funcional del HTML/CSS original de Stitch Tournament Monolith.
+ * No sustituye sus elementos ni redibuja la interfaz: adapta skeletons, estados vacíos,
+ * formularios y datos persistidos a su misma paleta/jerarquía tipográfica. */
+:root{--arena-amber:#d97706;--arena-black:#111827;--arena-faint:#f3f4f6}
+body{overflow-x:hidden}
+body.arena-loading{background:#f9fafb}
+body.arena-loading>header,body.arena-loading main,body.arena-loading footer{opacity:0;visibility:hidden}
+body.arena-ready>header,body.arena-ready main,body.arena-ready footer{opacity:1;visibility:visible;transition:opacity .3s ease,visibility .3s}
+#arena-skeleton{position:absolute;z-index:100;top:0;left:0;right:0;min-height:1100px;background:#f9fafb;padding-bottom:32px;pointer-events:none;opacity:1;transition:opacity .4s ease}
+body.arena-ready #arena-skeleton{opacity:0}
+.ske-nav{height:71px;padding:12px 2.5%;display:flex;align-items:center;justify-content:space-between;gap:1rem;background:white;border-bottom:1px solid #e5e7eb}
+.ske-hero{max-width:1400px;padding:45px 2.5%;margin:auto;display:grid;grid-template-columns:1.5fr 1fr;gap:4vw;min-height:310px}
+.ske-hero>div:first-child{display:flex;flex-direction:column;gap:17px;justify-content:center}
+.ske-cover{height:260px!important;border-radius:8px}
+.ske-cards{max-width:1400px;margin:15px auto 0;padding:0 2.5%;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ske-cards>.ske-block{min-height:115px;border-radius:7px}
+.ske-panel{max-width:1330px;margin:24px auto 0;padding:25px;background:white;display:flex;flex-direction:column;gap:23px;border-radius:8px;border:1px solid #e5e7eb}
+.ske-block{background:linear-gradient(110deg,#e8edf1 8%,#f7f9fc 20%,#e8edf1 33%);background-size:230% 100%;animation:arena-shimmer 1.35s linear infinite;border-radius:5px}
+@keyframes arena-shimmer{to{background-position-x:-230%}}
+@keyframes arena-rise{0%{opacity:0;transform:translateY(17px)}100%{opacity:1;transform:translateY(0)}}
+.arena-ready .arena-stagger{animation:arena-rise .55s cubic-bezier(.22,.8,.25,1) both}
+.arena-empty-state{background:#f9fafb;border:1px dashed #d1d5db;padding:38px 20px;min-height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;border-radius:8px;color:#4b5563;grid-column:1/-1}
+.arena-empty-state strong{font-family:'Space Grotesk',sans-serif;font-size:14px;letter-spacing:.04em;color:#111827;text-transform:uppercase}
+.arena-empty-state p{font:13px/1.5 Inter,sans-serif;max-width:550px;margin:0}
+.arena-empty-icon{background:#fef3c7;color:#d97706;width:46px;height:46px;display:grid;place-items:center;border-radius:4px}
+.arena-empty-icon .material-symbols-outlined{font-size:26px}
+.arena-section-heading>span{font:700 11px 'Space Grotesk',sans-serif;letter-spacing:.08em;color:#d97706}
+.arena-section-heading>h2{font:700 26px 'Space Grotesk',sans-serif;color:#111827;margin-top:7px}
+.arena-champion{margin-top:8px;font:700 14px 'Space Grotesk',sans-serif;color:#d97706}
+.arena-feature-card{display:flex;flex-direction:column;gap:12px;min-width:0}
+.arena-score-row{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#f3f4f6;padding:12px;border-radius:4px}
+.arena-score-row.alt{background:#fff;border:1px solid #f3f4f6}
+.arena-score-row>div{min-width:0}
+.arena-score-row strong{flex-shrink:0}
+.arena-score-row small{font:11px Inter,sans-serif}
+.arena-mini-crest{width:34px;height:34px;border-radius:3px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font:800 11px 'Space Grotesk',sans-serif;flex-shrink:0}
+.arena-event-summary{font:11px/1.6 Inter,sans-serif;color:#4b5563;padding-top:10px;border-top:1px solid #e5e7eb;min-height:27px}
+.arena-feature-actions{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-top:auto;flex-wrap:wrap}
+.arena-feature-actions a{font:700 10px 'Space Grotesk',sans-serif;letter-spacing:.03em;display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+.arena-feature-actions a:hover{text-decoration:underline}
+.arena-stats-link{background:#f3f4f6;color:#111827;padding:6px 12px}
+.arena-team-symbol{width:53px;height:53px;display:flex;align-items:center;justify-content:center;background:#111827;color:white;border-radius:4px;font:700 19px 'Space Grotesk',sans-serif;flex-shrink:0}
+.arena-team-card{display:flex;gap:15px;align-items:center;border:1px solid #e5e7eb;background:#f9fafb;padding:15px;border-radius:5px;min-width:0}
+.arena-team-card strong{font:700 15px 'Space Grotesk',sans-serif;color:#111827;overflow-wrap:anywhere}
+.arena-team-card p{font:12px Inter,sans-serif;color:#4b5563;margin:5px 0}
+.arena-team-card small{font:700 10px 'Space Grotesk',sans-serif;color:#d97706;letter-spacing:.05em}
+.arena-stitch-form{display:flex;flex-direction:column;gap:17px}
+.arena-stitch-form label{display:flex;flex-direction:column;gap:6px;font:700 12px 'Space Grotesk',sans-serif;text-transform:uppercase;letter-spacing:.035em;color:#111827}
+.arena-stitch-form input:not([type=hidden]):not([type=checkbox]),.arena-admin-result input{min-height:42px;width:100%;border:1px solid #d1d5db;background:white;border-radius:3px;padding:10px 13px;color:#111827;font:14px Inter,sans-serif;text-transform:none}
+.arena-stitch-form input:focus,.arena-admin-result input:focus{border-color:#111827;outline:1px solid #111827}
+.arena-action,.arena-action-secondary{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;cursor:pointer;font:700 11px 'Space Grotesk',sans-serif;letter-spacing:.04em;padding:12px 16px;text-transform:uppercase;border-radius:3px;border:1px solid #111827;transition:background .2s ease,transform .2s ease}
+.arena-action{background:#d97706;border-color:#d97706;color:white}
+.arena-action:hover{background:#b45309;transform:translateY(-1px)}
+.arena-action-secondary{background:#111827;color:white}
+.arena-action-secondary:hover{background:#374151}
+.arena-auth-wrap{max-width:610px;margin:0 auto}
+.arena-create-wrap{max-width:1030px;margin:0 auto}
+.arena-create-team-section{border-top:1px solid #e5e7eb;padding-top:20px;margin-top:8px}
+.arena-team-option{display:flex!important;flex-direction:row!important;gap:10px!important;align-items:center;padding:9px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;text-transform:none!important}
+.arena-team-option input{width:16px;height:16px;accent-color:#d97706;flex-shrink:0}
+.arena-team-option span:last-child{flex:1}
+.arena-check-option{background:#fff7eb;padding:14px;border:1px solid #f59e0b;display:flex!important;flex-direction:row!important;align-items:flex-start!important;gap:10px!important}
+.arena-check-option input{width:18px;height:18px;accent-color:#d97706;flex-shrink:0;margin-top:1px}
+.arena-check-option strong{display:block;color:#111827;font:700 12px 'Space Grotesk',sans-serif}
+.arena-check-option small{display:block;color:#4b5563;font:11px/1.6 Inter,sans-serif;margin-top:5px}
+.arena-admin-group{margin:16px 0 28px}
+.arena-admin-group[hidden]{display:none!important}
+.arena-admin-group-title{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:13px;margin-bottom:15px;border-bottom:2px solid #111827;font:700 14px 'Space Grotesk',sans-serif;text-transform:uppercase}
+.arena-admin-group-title small{font-size:10px;color:#d97706}
+.arena-admin-match{min-height:205px}
+.arena-admin-score{background:#f9fafb;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;font:700 13px 'Space Grotesk',sans-serif}
+.arena-admin-score>div{max-width:40%;overflow-wrap:anywhere}
+.arena-admin-score strong{font:700 21px 'Space Grotesk',sans-serif;white-space:nowrap;color:#d97706}
+.arena-admin-result{display:flex;flex-direction:column;gap:10px}
+.arena-admin-result>div{display:flex;gap:15px}
+.arena-admin-result label{font:700 11px 'Space Grotesk',sans-serif;color:#4b5563;flex:1;text-transform:uppercase}
+.arena-admin-result input{display:block;width:100%;margin-top:4px}
+.arena-status-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.arena-status-actions button{background:#111827;color:white;padding:7px 12px;font:700 11px 'Space Grotesk',sans-serif}
+.arena-status-actions button[value="team.reject"]{background:#dc2626}
+.arena-filter-active{background:#111827!important;color:white!important}
+.arena-bracket-empty{display:grid;place-items:center;min-height:420px;padding:25px}
+.arena-bracket-winner{background:#fef3c7!important;color:#111827!important}
+.arena-bracket-loser{opacity:.6}
+.arena-match-pending{border:1px dashed #d1d5db}
+.arena-live-event{display:grid;grid-template-columns:45px 25px 1fr;gap:11px;padding:10px;border-bottom:1px solid #e5e7eb;align-items:start;background:white;border-radius:4px;margin:4px 0}
+.arena-event-minute{font:700 12px 'Space Grotesk',sans-serif;color:#d97706}
+.arena-live-event strong{font:700 12px 'Space Grotesk',sans-serif;display:block}
+.arena-live-event small{font:11px Inter,sans-serif;color:#4b5563;display:block;margin-top:4px}
+.arena-event-future{opacity:.24}
+.arena-simulation-note{background:#fffbeb;color:#92400e;font:12px/1.5 Inter,sans-serif;padding:13px;margin-top:10px;border-left:4px solid #d97706}
+.arena-logout{display:inline-flex;align-items:center;margin-left:6px}
+.arena-logout button{font:700 10px 'Space Grotesk',sans-serif;color:#d97706;border:1px solid #d97706;padding:5px 10px;border-radius:2px;background:transparent}
+.arena-flash{margin:12px 2.5% 0;padding:12px 20px;border-left:4px solid #d97706;background:#fef3c7;color:#111827;font:13px/1.5 Inter,sans-serif}
+.arena-flash.error{border-left-color:#dc2626;background:#fee2e2}
+/* Obsidian, un modo alternativo; Monolith es el diseño de referencia por defecto. */
+html.dark body{background:#0f172a!important}
+html.dark header,html.dark footer{filter:invert(.9) hue-rotate(180deg)}
+@media(max-width:1024px){.ske-nav>.ske-block:nth-child(2){display:none}.ske-hero{grid-template-columns:1fr 200px}.ske-cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.ske-hero{grid-template-columns:1fr;min-height:260px}.ske-cover{display:none}.ske-nav{height:62px}.ske-cards{grid-template-columns:repeat(2,1fr)}.ske-cards>.ske-block{min-height:90px}.ske-panel{margin:12px}.arena-score-row{padding:8px}.arena-admin-score{font-size:11px}.arena-logout{margin:0 0 0 2px}}
+@media(prefers-reduced-motion:reduce){.ske-block{animation:none}.arena-ready .arena-stagger{animation:none}html{scroll-behavior:auto}}
