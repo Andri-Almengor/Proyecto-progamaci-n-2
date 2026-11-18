@@ -1,0 +1,35 @@
+name: Import original Stitch artwork
+on:
+  push:
+    branches: [feat/stitch-layout-exact-dynamic]
+    paths:
+      - '.github/workflows/stitch-sync.yml'
+      - '.stitch/payload-*'
+permissions:
+  contents: write
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Decode exactly the supplied Stitch source and integrate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if compgen -G '.stitch/payload-*' > /dev/null; then
+            cat .stitch/payload-* | tr -d '\n' | base64 --decode > /tmp/stitch-source.tar.xz
+            tar -xJf /tmp/stitch-source.tar.xz
+            rm -f .stitch/payload-*
+          else
+            mkdir -p .stitch
+            printf 'Workflow write test successful\n' > .stitch/workflow-ok.txt
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'feat: import exact Stitch HTML screens and live data bridge'
+            git push origin HEAD:feat/stitch-layout-exact-dynamic
+          fi
