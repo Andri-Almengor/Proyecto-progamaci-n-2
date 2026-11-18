@@ -23,11 +23,11 @@ public final class AppServlet extends HttpServlet {
         String view = req.getParameter("view");
         if (view == null || view.isBlank()) view = "inicio";
         if (!("inicio".equals(view) || "equipos".equals(view) || "admin".equals(view) ||
-              "login".equals(view) || "registro".equals(view) || "partido".equals(view))) {
+              "login".equals(view) || "registro".equals(view) || "partido".equals(view) || "cuadro".equals(view) || "crear".equals(view))) {
             res.sendError(404); return;
         }
         Store.User current = Web.user(req);
-        if ("admin".equals(view) && (current == null || !current.admin())) { res.sendError(403); return; }
+        if (("admin".equals(view) || "crear".equals(view)) && (current == null || !current.admin())) { res.sendError(403); return; }
         if (("login".equals(view) || "registro".equals(view)) && current != null) {
             res.sendRedirect(path(req, "inicio")); return;
         }
@@ -57,11 +57,14 @@ public final class AppServlet extends HttpServlet {
         }
         String page;
         switch (view) {
-            case "login": case "registro": page = "auth.jsp"; break;
-            case "equipos": page = "teams.jsp"; break;
-            case "partido": page = "match.jsp"; break;
-            case "admin": page = "admin.jsp"; break;
-            default: page = "home.jsp"; break;
+            case "login": page = "stitch-login.jsp"; break;
+            case "registro": page = "stitch-register.jsp"; break;
+            case "equipos": page = "stitch-teams.jsp"; break;
+            case "partido": page = "stitch-match.jsp"; break;
+            case "cuadro": page = "stitch-bracket.jsp"; break;
+            case "crear": page = "stitch-create.jsp"; break;
+            case "admin": page = "stitch-admin.jsp"; break;
+            default: page = "stitch-home.jsp"; break;
         }
         req.getRequestDispatcher("/WEB-INF/views/" + page).forward(req, res);
     }
