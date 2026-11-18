@@ -44,6 +44,7 @@ jobs:
         run: test -f target/BracketArena.war
       - name: Deploy WAR and smoke-test JSP in Tomcat 11
         run: |
+          set -ex
           docker run -d --rm --name bracket-arena-smoke --network host \
             -e 'DB_URL=jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC' \
             -e 'DB_USER=root' -e 'DB_PASSWORD=ci_password' \
@@ -57,11 +58,13 @@ jobs:
             sleep 2
           done
           test "$ready" = "1"
+          echo 'STITCH TEST: homepage headline'
           grep -q 'LA GRAN FINAL NACIONAL' /tmp/bracket-home.html
           for page in equipos login registro cuadro; do
             curl -fsS "$base?view=$page" -o "/tmp/bracket-$page.html"
           done
           curl -fsS -c /tmp/bracket-cookies -b /tmp/bracket-cookies "$base?view=login" -o /tmp/bracket-login.html
+          echo 'STITCH TEST: find server-side CSRF'
           csrf=$(grep -o 'name="csrf" value="[^"]*"' /tmp/bracket-login.html | head -1 | cut -d '"' -f4)
           test -n "$csrf"
           curl -fsSL -c /tmp/bracket-cookies -b /tmp/bracket-cookies \
@@ -70,8 +73,10 @@ jobs:
             --data-urlencode "email=admin@torneo.local" \
             --data-urlencode "password=AdminExamen2026!" \
             "$base" -o /tmp/bracket-authenticated.html
+          echo 'STITCH TEST: login success'
           grep -q 'Bienvenido' /tmp/bracket-authenticated.html
           curl -fsS -b /tmp/bracket-cookies "$base?view=admin" -o /tmp/bracket-admin.html
+          echo 'STITCH TEST: admin panel'
           grep -q 'Gestor de Inscripciones y Solicitudes' /tmp/bracket-admin.html
 
       - name: Smoke-test public match report with statistics
