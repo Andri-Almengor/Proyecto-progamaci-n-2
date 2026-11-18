@@ -65,6 +65,7 @@ jobs:
           done
           curl -fsS -c /tmp/bracket-cookies -b /tmp/bracket-cookies "$base?view=login" -o /tmp/bracket-login.html
           echo 'STITCH TEST: find server-side CSRF'
+          grep -oE '.{0,30}name="csrf".{0,120}' /tmp/bracket-login.html | head -1 || true
           csrf=$(grep -o 'name="csrf" value="[^"]*"' /tmp/bracket-login.html | head -1 | cut -d '"' -f4)
           test -n "$csrf"
           curl -fsSL -c /tmp/bracket-cookies -b /tmp/bracket-cookies \
