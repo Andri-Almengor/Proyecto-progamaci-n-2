@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{js,css,json,yml,yaml}]
+indent_size = 2
+
+[*.{jsp,jspf,html,xml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# Los archivos JSP de web/WEB-INF/views/arena/ son exportaciones originales
+# de Stitch. Se preserva su estructura HTML para no alterar la maquetación.
