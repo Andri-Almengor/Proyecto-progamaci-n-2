@@ -89,3 +89,23 @@ El endpoint público de solo lectura `GET /arena-data` obtiene del servidor la e
 Al entrar, las secciones se ocultan tras tarjetas skeleton con shimmer; los datos se consultan y el contenido aparece en secuencia descendente con transiciones suaves. Se respetan `prefers-reduced-motion`, navegación por teclado y permisos del administrador.
 
 **Rutas:** `/app?view=inicio`, `/app?view=cuadro`, `/app?view=equipos`, `/app?view=admin`, `/app?view=crear` (admin), `/app?view=partido&id=N`, `/app?view=login` y `/app?view=registro`.
+
+
+## Transmisión simulada en vivo: 60 segundos por encuentro (2026)
+
+Además del modo manual y el modo de resolución instantánea de los 15 partidos, el administrador puede elegir **Transmisión en vivo** al crear una copa, o iniciarla para un torneo activo desde Administración.
+
+- Cada partido simulado dura **60 segundos reales** (minutos virtuales 0 a 90).
+- Hay un **intervalo de 20 segundos** antes de comenzar el siguiente encuentro.
+- Durante cada partido, los visitantes ven los goles, el cronómetro, los pases, los tiros, los córners y las faltas que corresponden al minuto visible.
+- Al acabar, se guarda el marcador definitivo, el ganador avanza en el cuadro y el próximo encuentro empieza después del intervalo.
+- Las pantallas **Inicio**, **Cuadro** y **Administración** consultan `GET /arena-data` periódicamente sin tener que recargar la página. El visitante puede entrar a mitad de un encuentro.
+- La progresión se guarda en MySQL; **no necesita la pestaña del administrador abierta**. Si no hay visitantes, en la siguiente consulta se procesan los encuentros cuyos tiempos ya vencieron. No requiere un hilo temporizado dentro de Tomcat.
+- El modo instantáneo anterior permanece disponible. El administrador no puede registrar marcadores manuales durante una transmisión activa.
+- Son **partidos y estadísticas ficticios**, no una transmisión de encuentros deportivos reales.
+
+**Importante para bases existentes:** ejecutar primero `database/migrations/upgrade_live_tournaments.sql` en MySQL Workbench después de actualizar el código. El instalador `database/instalacion_completa_2026.sql` ya lo incluye para instalaciones nuevas. No borra resultados.
+
+### Encabezado según permisos
+
+La barra superior es compartida por todas las páginas. Los visitantes reciben exclusivamente el acceso **Iniciar sesión**; los miembros autenticados ven su nombre y **Salir**. Solo los administradores reciben el enlace **Administración**, comprobado desde JSP y el controlador Java. La pestaña activa tiene un fondo claro y no se muestran roles ficticios ni el mensaje «Datos actualizados».

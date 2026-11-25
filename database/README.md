@@ -118,3 +118,17 @@ python database/generar_instalador.py
 ```
 
 El flujo de GitHub Actions verifica que el instalador esté sincronizado y prueba la carga de 20 equipos y su reejecución sin duplicados.
+
+
+## Migración del modo de transmisión en vivo (noviembre de 2026)
+
+**Si tu base de datos ya existe**, esta actualización incorpora una tabla nueva:
+
+1. Realizá un respaldo de la base `torneos`.
+2. Abrí y ejecutá `database/migrations/upgrade_live_tournaments.sql` como administrador de MySQL.
+3. Actualizá el repositorio con `git pull origin main` cuando el PR se fusione, reiniciá NetBeans/Tomcat y ejecutá el proyecto.
+4. En Administración podés seleccionar el modo **Manual**, **Instantáneo** o **Transmisión en vivo**.
+
+La tabla `tournament_live_runs` guarda la secuencia actual, el inicio del encuentro, el siguiente inicio y un plan deportivo determinista. No guarda contraseñas. Las tablas `matches`, `match_simulations`, `match_half_stats` y `match_events` conservan los resultados definitivos.
+
+El modo en vivo tarda aproximadamente **19 minutos y 40 segundos** en disputar los 15 partidos si empieza con los octavos sin interrupciones: 60 segundos por encuentro y 20 segundos entre encuentros. La sesión del administrador puede cerrarse sin detener la secuencia. Para evitar cargas innecesarias, no se mantienen conexiones persistentes con todos los visitantes: cada navegador realiza consultas periódicas al servidor.

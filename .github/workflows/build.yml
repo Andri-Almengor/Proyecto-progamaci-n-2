@@ -72,6 +72,9 @@ jobs:
           mysql_root -e "DROP DATABASE torneos"
           mysql_root < database/instalacion_completa_2026.sql >/dev/null
           verify_seed
+          # La migración de modo en vivo se puede reejecutar sin borrar datos.
+          mysql_root < database/migrations/upgrade_live_tournaments.sql >/dev/null
+          mysql_root < database/migrations/upgrade_live_tournaments.sql >/dev/null
           # Validar el SQL de creación del usuario restringido en CI.
           mysql_root < database/setup/usuario_aplicacion.sql >/dev/null
           mysql_root -e "SHOW GRANTS FOR 'torneos_app'@'localhost'" >/dev/null
