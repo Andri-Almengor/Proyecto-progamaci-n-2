@@ -6,142 +6,310 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-/** Provee exclusivamente datos persistidos en MySQL para las vistas originales de Stitch. */
+/**
+ * Endpoint de solo lectura que conecta la interfaz original de Stitch con MySQL.
+ *
+ * <p>Responde con el torneo más reciente, equipos, enfrentamientos, eventos de
+ * partidos y sus estadísticas. No expone teléfonos de equipos a visitantes ni
+ * presenta sanciones deportivas que la base todavía no registre.
+ *
+ * <p>Las estadísticas de los reportes son ilustrativas: se generan y guardan
+ * mediante {@link MatchSimulation}, no se recopilan de encuentros reales.
+ */
 @WebServlet("/arena-data")
 public final class ArenaDataServlet extends HttpServlet {
-    private static Map<String,Object> obj(Object... pairs) {
-        Map<String,Object> map = new LinkedHashMap<>();
-        for (int i = 0; i < pairs.length; i += 2) map.put((String)pairs[i], pairs[i+1]);
-        return map;
-    }
-    private static String safe(String s) { return s == null ? "" : s; }
-    private static Map<String,Object> half(MatchSimulation.Half h) {
-        return obj("period", h.number, "possessionA", h.possessionA, "possessionB", 100-h.possessionA,
-            "passesA", h.passesA,"passesB", h.passesB,
-            "shotsA",h.shotsA,"shotsB",h.shotsB,"onA",h.onA,"onB",h.onB,
-            "dangerousA",h.dangerousA,"dangerousB",h.dangerousB,
-            "cornersA",h.cornersA,"cornersB",h.cornersB,
-            "foulsA",h.foulsA,"foulsB",h.foulsB,
-            "goalsA",h.goalsA,"goalsB",h.goalsB);
-    }
-    private static void json(StringBuilder out,Object data) {
-        if (data == null) { out.append("null"); return; }
-        if (data instanceof Number || data instanceof Boolean) { out.append(data); return; }
-        if (data instanceof Map<?,?> m) {
-            out.append('{'); boolean first=true;
-            for (Map.Entry<?,?> e : m.entrySet()) {
-                if(!first)out.append(',');first=false;
-                json(out,String.valueOf(e.getKey()));out.append(':');json(out,e.getValue());
-            }out.append('}');return;
+
+    /** Crea un objeto JSON ordenado a partir de pares clave-valor. */
+    private static Map<String, Object> object(Object... fields) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (int index = 0; index < fields.length; index += 2) {
+            result.put((String) fields[index], fields[index + 1]);
         }
-        if (data instanceof Iterable<?> it) {
-            out.append('[');boolean first=true;
-            for(Object element:it){if(!first)out.append(',');first=false;json(out,element);}
-            out.append(']');return;
+        return result;
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    /** Convierte las estadísticas de un tiempo a la estructura esperada por Stitch. */
+    private static Map<String, Object> half(MatchSimulation.Half period) {
+        return object(
+                "period", period.number,
+                "possessionA", period.possessionA,
+                "possessionB", 100 - period.possessionA,
+                "passesA", period.passesA,
+                "passesB", period.passesB,
+                "shotsA", period.shotsA,
+                "shotsB", period.shotsB,
+                "onA", period.onA,
+                "onB", period.onB,
+                "dangerousA", period.dangerousA,
+                "dangerousB", period.dangerousB,
+                "cornersA", period.cornersA,
+                "cornersB", period.cornersB,
+                "foulsA", period.foulsA,
+                "foulsB", period.foulsB,
+                "goalsA", period.goalsA,
+                "goalsB", period.goalsB);
+    }
+
+    /**
+     * Serializador JSON pequeño para las estructuras conocidas de la API.
+     * Escapa <, > y & para impedir que cadenas de usuario formen HTML ejecutable.
+     */
+    private static void appendJson(StringBuilder output, Object value) {
+        if (value == null) {
+            output.append("null");
+            return;
         }
-        out.append('"');
-        for (char c : data.toString().toCharArray()) {
-            switch(c) {
-                case '"':out.append("\\\"");break;
-                case '\\':out.append("\\\\");break;
-                case '\n':out.append("\\n");break;
-                case '\r':out.append("\\r");break;
-                case '\t':out.append("\\t");break;
-                case '<':out.append("\\u003c");break;
-                case '>':out.append("\\u003e");break;
-                case '&':out.append("\\u0026");break;
-                default: if(c < 0x20 || c == 0x2028 || c == 0x2029)
-                    out.append(String.format("\\u%04x",(int)c)); else out.append(c);
+        if (value instanceof Number || value instanceof Boolean) {
+            output.append(value);
+            return;
+        }
+        if (value instanceof Map<?, ?> map) {
+            output.append('{');
+            boolean first = true;
+            for (Map.Entry<?, ?> field : map.entrySet()) {
+                if (!first) {
+                    output.append(',');
+                }
+                first = false;
+                appendJson(output, String.valueOf(field.getKey()));
+                output.append(':');
+                appendJson(output, field.getValue());
+            }
+            output.append('}');
+            return;
+        }
+        if (value instanceof Iterable<?> collection) {
+            output.append('[');
+            boolean first = true;
+            for (Object item : collection) {
+                if (!first) {
+                    output.append(',');
+                }
+                first = false;
+                appendJson(output, item);
+            }
+            output.append(']');
+            return;
+        }
+
+        output.append('"');
+        for (char character : value.toString().toCharArray()) {
+            switch (character) {
+                case '"' -> output.append("\\\"");
+                case '\\' -> output.append("\\\\");
+                case '\n' -> output.append("\\n");
+                case '\r' -> output.append("\\r");
+                case '\t' -> output.append("\\t");
+                case '<' -> output.append("\\u003c");
+                case '>' -> output.append("\\u003e");
+                case '&' -> output.append("\\u0026");
+                default -> {
+                    if (character < 0x20 || character == 0x2028 || character == 0x2029) {
+                        output.append(String.format("\\u%04x", (int) character));
+                    } else {
+                        output.append(character);
+                    }
+                }
             }
         }
-        out.append('"');
+        output.append('"');
     }
-    @Override protected void doGet(HttpServletRequest req,HttpServletResponse res) throws ServletException,IOException {
-        res.setContentType("application/json;charset=UTF-8");
-        res.setHeader("Cache-Control","no-store");
+
+    /**
+     * Consulta los datos persistidos y devuelve JSON al navegador.
+     * No requiere login porque el tablero y las estadísticas son públicos.
+     */
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-store");
+
         try {
-            Store.State s = Store.load();
-            Store.User user = Web.user(req);
-            List<Object> teams = new ArrayList<>(), matches = new ArrayList<>(), scorers = new ArrayList<>();
-            Map<String,Map<String,Object>> scorerIndex = new HashMap<>();
-            int totalGoals=0,totalFouls=0;
-            for (Store.Team t : s.teams) {
-                teams.add(obj("id",t.id,"name",t.name,"shield",safe(t.shield),"status",t.status,
-                    "owner",t.owner,"phone",user != null && (user.admin() || user.id == t.ownerId) ? t.phone : "","participant",s.participantIds.contains(t.id)));
+            Store.State state = Store.load();
+            Store.User currentUser = Web.user(request);
+
+            List<Object> teams = new ArrayList<>();
+            List<Object> matches = new ArrayList<>();
+            List<Object> scorers = new ArrayList<>();
+            Map<String, Map<String, Object>> scorersByKey = new HashMap<>();
+
+            int totalGoals = 0;
+            int totalFouls = 0;
+
+            // Los números de contacto son privados para visitantes y otros usuarios.
+            for (Store.Team team : state.teams) {
+                boolean mayReadPhone = currentUser != null
+                        && (currentUser.admin() || currentUser.id == team.ownerId);
+
+                teams.add(object(
+                        "id", team.id,
+                        "name", team.name,
+                        "shield", safe(team.shield),
+                        "status", team.status,
+                        "owner", team.owner,
+                        "phone", mayReadPhone ? team.phone : "",
+                        "participant", state.participantIds.contains(team.id)));
             }
-            for (Store.Match m : s.matches) {
-                Map<String,Object> match = obj("id",m.id,"round",m.round,"position",m.position,
-                    "aId",m.aId,"bId",m.bId,"aName",safe(m.aName),"bName",safe(m.bName),
-                    "aShield",safe(m.aShield),"bShield",safe(m.bShield),"scoreA",m.scoreA,
-                    "scoreB",m.scoreB,"winnerId",m.winnerId,"done",m.done(),
-                    "ready",!m.done() && m.aId!=null && m.bId!=null);
-                if (m.done()) {
-                    Store.MatchDetail detail=Store.loadMatchDetail(m.id);
-                    MatchSimulation.Report report=detail.report;
-                    if(report!=null) {
-                        Map<String,Object> reportJson = obj("mode",report.mode,
-                            "first",half(report.first),"second",half(report.second),"total",half(report.total()));
-                        List<Object> events=new ArrayList<>();
-                        for (MatchSimulation.Event e:report.events) {
-                            Long teamId="A".equals(e.side) ? m.aId : m.bId;
-                            String teamName="A".equals(e.side) ? safe(m.aName) : safe(m.bName);
-                            events.add(obj("minute",e.minute,"type",e.type,"side",e.side,
-                                "player",e.player,"outgoing",e.outgoing,"team",teamName));
-                            if ("GOL".equals(e.type) && teamId != null) {
-                                String key=teamId+"/"+e.player;
-                                Map<String,Object> score=scorerIndex.get(key);
-                                if (score==null) {
-                                    score=obj("player",e.player,"team",teamName,"teamId",teamId,"goals",0,"matches",0);
-                                    scorerIndex.put(key,score);
+
+            // Cada encuentro puede tener un reporte con estadísticas y eventos.
+            for (Store.Match game : state.matches) {
+                Map<String, Object> match = object(
+                        "id", game.id,
+                        "round", game.round,
+                        "position", game.position,
+                        "aId", game.aId,
+                        "bId", game.bId,
+                        "aName", safe(game.aName),
+                        "bName", safe(game.bName),
+                        "aShield", safe(game.aShield),
+                        "bShield", safe(game.bShield),
+                        "scoreA", game.scoreA,
+                        "scoreB", game.scoreB,
+                        "winnerId", game.winnerId,
+                        "done", game.done(),
+                        "ready", !game.done() && game.aId != null && game.bId != null);
+
+                if (game.done()) {
+                    Store.MatchDetail detail = Store.loadMatchDetail(game.id);
+                    MatchSimulation.Report report = detail.report;
+                    if (report != null) {
+                        Map<String, Object> reportJson = object(
+                                "mode", report.mode,
+                                "first", half(report.first),
+                                "second", half(report.second),
+                                "total", half(report.total()));
+
+                        List<Object> events = new ArrayList<>();
+                        for (MatchSimulation.Event event : report.events) {
+                            boolean homeTeam = "A".equals(event.side);
+                            Long teamId = homeTeam ? game.aId : game.bId;
+                            String teamName = homeTeam ? safe(game.aName) : safe(game.bName);
+
+                            events.add(object(
+                                    "minute", event.minute,
+                                    "type", event.type,
+                                    "side", event.side,
+                                    "player", event.player,
+                                    "outgoing", event.outgoing,
+                                    "team", teamName));
+
+                            // Solo eventos GOL contribuyen a la tabla de goleadores.
+                            if ("GOL".equals(event.type) && teamId != null) {
+                                String key = teamId + "/" + event.player;
+                                Map<String, Object> scorer = scorersByKey.get(key);
+                                if (scorer == null) {
+                                    scorer = object(
+                                            "player", event.player,
+                                            "team", teamName,
+                                            "teamId", teamId,
+                                            "goals", 0,
+                                            "matches", 0);
+                                    scorersByKey.put(key, scorer);
                                 }
-                                score.put("goals",((Number)score.get("goals")).intValue()+1);
+                                int goals = ((Number) scorer.get("goals")).intValue();
+                                scorer.put("goals", goals + 1);
                             }
                         }
-                        reportJson.put("events",events);
-                        match.put("report",reportJson);
-                        totalGoals+=m.scoreA+m.scoreB;
-                        totalFouls+=report.total().foulsA+report.total().foulsB;
+
+                        reportJson.put("events", events);
+                        match.put("report", reportJson);
+                        totalGoals += game.scoreA + game.scoreB;
+                        totalFouls += report.total().foulsA + report.total().foulsB;
                     }
                 }
                 matches.add(match);
             }
-            for (Map<String,Object> score:scorerIndex.values()) {
-                long teamId=((Number)score.get("teamId")).longValue();
-                long games=s.matches.stream().filter(m -> m.done() && (Long.valueOf(teamId).equals(m.aId)||Long.valueOf(teamId).equals(m.bId))).count();
-                score.put("matches",games);
-                scorers.add(score);
+
+            // Goleadores agrupados por ID de equipo y número ficticio de jugador.
+            for (Map<String, Object> scorer : scorersByKey.values()) {
+                long teamId = ((Number) scorer.get("teamId")).longValue();
+                long gamesPlayed = state.matches.stream()
+                        .filter(game -> game.done()
+                                && (Long.valueOf(teamId).equals(game.aId)
+                                    || Long.valueOf(teamId).equals(game.bId)))
+                        .count();
+                scorer.put("matches", gamesPlayed);
+                scorers.add(scorer);
             }
-            scorers.sort((a,b)-> {
-                Map<?,?> x=(Map<?,?>)a,y=(Map<?,?>)b;
-                int cmp=Integer.compare(((Number)y.get("goals")).intValue(),((Number)x.get("goals")).intValue());
-                return cmp != 0 ? cmp : String.valueOf(x.get("player")).compareTo(String.valueOf(y.get("player")));
+            scorers.sort((left, right) -> {
+                Map<?, ?> a = (Map<?, ?>) left;
+                Map<?, ?> b = (Map<?, ?>) right;
+                int goalsA = ((Number) a.get("goals")).intValue();
+                int goalsB = ((Number) b.get("goals")).intValue();
+                int comparison = Integer.compare(goalsB, goalsA);
+                return comparison != 0
+                        ? comparison
+                        : String.valueOf(a.get("player")).compareTo(String.valueOf(b.get("player")));
             });
-            Map<String,Object> tournament=null;
-            if (s.tournament!=null) {
-                Store.Tournament t=s.tournament;
-                tournament=obj("id",t.id,"name",t.name,"image",safe(t.image),
-                    "start",t.start.toString(),"end",t.end.toString(),
-                    "prize",t.prize,"status",t.status,"championName",safe(t.championName),
-                    "championId",t.championId,"championShield",safe(t.championShield));
+
+            Map<String, Object> tournament = null;
+            if (state.tournament != null) {
+                Store.Tournament cup = state.tournament;
+                tournament = object(
+                        "id", cup.id,
+                        "name", cup.name,
+                        "image", safe(cup.image),
+                        "start", cup.start.toString(),
+                        "end", cup.end.toString(),
+                        "prize", cup.prize,
+                        "status", cup.status,
+                        "championName", safe(cup.championName),
+                        "championId", cup.championId,
+                        "championShield", safe(cup.championShield));
             }
-            Map<String,Object> currentUser=user==null?null:obj("id",user.id,"name",user.name,"role",user.role,"admin",user.admin());
-            Map<String,Object> root=obj("ok",true,"year",2026,"tournament",tournament,"user",currentUser,
-                "csrf",Web.token(req),"approved",s.approved,"pending",s.pending,
-                "finalized",s.finalized,"totalMatches",15,"totalGoals",totalGoals,"totalFouls",totalFouls,
-                "teams",teams,"matches",matches,"scorers",scorers,
-                "discipline",obj("fouls",totalFouls,"yellow",null,"red",null,
-                    "explanation","El sistema registra faltas simuladas, pero todavía no registra tarjetas amarillas o rojas."));
-            StringBuilder json=new StringBuilder(19000);
-            json(json,root);
-            res.getWriter().write(json.toString());
-        } catch(SQLException e) {
-            log("Error preparando los datos del tablero de Stitch",e);
-            res.setStatus(503);
-            res.getWriter().write("{\"ok\":false,\"error\":\"No se pudo consultar MySQL. Verificá DB_URL, DB_USER y DB_PASSWORD.\"}");
+
+            Map<String, Object> user = currentUser == null
+                    ? null
+                    : object(
+                            "id", currentUser.id,
+                            "name", currentUser.name,
+                            "role", currentUser.role,
+                            "admin", currentUser.admin());
+
+            // Las tarjetas no forman parte del esquema; nunca inventar sanciones.
+            Map<String, Object> root = object(
+                    "ok", true,
+                    "year", 2026,
+                    "tournament", tournament,
+                    "user", user,
+                    "csrf", Web.token(request),
+                    "approved", state.approved,
+                    "pending", state.pending,
+                    "finalized", state.finalized,
+                    "totalMatches", 15,
+                    "totalGoals", totalGoals,
+                    "totalFouls", totalFouls,
+                    "teams", teams,
+                    "matches", matches,
+                    "scorers", scorers,
+                    "discipline", object(
+                            "fouls", totalFouls,
+                            "yellow", null,
+                            "red", null,
+                            "explanation", "El sistema registra faltas simuladas, "
+                                    + "pero todavía no registra tarjetas amarillas o rojas."));
+
+            StringBuilder output = new StringBuilder(19000);
+            appendJson(output, root);
+            response.getWriter().write(output.toString());
+        } catch (SQLException ex) {
+            log("Error preparando los datos del tablero de Stitch", ex);
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.getWriter().write(
+                    "{\"ok\":false,\"error\":\"No se pudo consultar MySQL. "
+                    + "Verificá DB_URL, DB_USER y DB_PASSWORD.\"}");
         }
     }
 }
