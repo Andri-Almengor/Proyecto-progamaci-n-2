@@ -1535,7 +1535,25 @@
         }
         state.data = d;
         decorateNav(d);
-        if (page === "home" && d.finalized !== old?.finalized) drawHome(d);
+        if (page === "home") {
+          if (d.finalized !== old?.finalized) drawHome(d);
+          else {
+            // Los goles de la transmisión se reflejan en las métricas y
+            // tabla de goleadores sin esperar al cierre del encuentro.
+            drawLeaders(d, section(5));
+            const cards = $("div.grid > div", section(2));
+            const values = [
+              d.tournament ? 16 : d.approved,
+              d.tournament ? 15 : 0,
+              d.finalized,
+              d.totalGoals
+            ];
+            cards.slice(0, 4).forEach((card, index) => {
+              const labels = $("p", card);
+              if (labels[1]) labels[1].textContent = number(values[index]);
+            });
+          }
+        }
         if (page === "bracket") updateLiveBracket(d);
         if (page === "match") {
           const matchId = Number(new URLSearchParams(location.search).get("id"));
