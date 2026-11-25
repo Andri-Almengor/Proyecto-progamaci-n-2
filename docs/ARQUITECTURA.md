@@ -139,3 +139,18 @@ java -jar google-java-format-1.24.0-all-deps.jar --aosp --replace src/java/com/t
 No se agregaron dependencias a la ejecución de Tomcat. La carpeta de vistas
 `web/WEB-INF/views/arena/` mantiene la salida original de Stitch para
 evitar diferencias inesperadas de espaciado en el diseño.
+
+
+## Nuevo modo de torneo secuencial
+
+`LiveTournament.java` gestiona el estado del torneo programado y sincroniza el reloj desde MySQL:
+
+- `tournament_live_runs`: tabla única por torneo con estado, partido en curso, inicio previsto, marcador programado y semilla aleatoria.
+- `LiveTournament.tick()`: atiende cada consulta de la API; utiliza bloqueos transaccionales e idempotencia para terminar una sola vez cada partido vencido.
+- `Store.finishMatchScheduled()`: registra el resultado y la ficha que se generó para ese encuentro, avanzando el ganador en las llaves.
+- `ArenaDataServlet`: entrega a los visitantes **solo los eventos que ya ocurrieron** según el minuto transcurrido. No expone resultados futuros.
+- `stitch-runtime.js`: muestra un marcador en vivo, las estadísticas parciales y el estado de descanso. Actualiza las llaves mediante consultas periódicas.
+
+No hay un temporizador de negocio dependiente del navegador o de una sesión. Si se reinicia Tomcat o nadie consulta la aplicación durante un periodo, la próxima solicitud retoma el reloj persistido. El sistema no presenta este juego sintético como un partido real.
+
+**Migración:** `database/migrations/upgrade_live_tournaments.sql` debe ejecutarse en instalaciones antiguas antes de desplegar la nueva versión.

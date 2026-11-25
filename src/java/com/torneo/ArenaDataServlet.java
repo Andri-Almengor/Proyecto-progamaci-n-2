@@ -138,6 +138,8 @@ public final class ArenaDataServlet extends HttpServlet {
         response.setHeader("Cache-Control", "no-store");
 
         try {
+            // La petición pública adelanta los partidos cuyo reloj venció.
+            Map<String, Object> live = LiveTournament.tick();
             Store.State state = Store.load();
             Store.User currentUser = Web.user(request);
 
@@ -241,6 +243,42 @@ public final class ArenaDataServlet extends HttpServlet {
                         totalFouls += report.total().foulsA + report.total().foulsB;
                     }
                 }
+                if ("PLAYING".equals(live.get("phase"))
+                        && game.id == ((Number) live.get("matchId")).longValue()) {
+                    // La tabla matches conserva el resultado final en NULL
+                    // hasta cerrar este partido; no se filtran goles futuros.
+                    match.put("live", true);
+                    match.put("liveMinute", live.get("minute"));
+                    match.put("scoreA", live.get("scoreA"));
+                    match.put("scoreB", live.get("scoreB"));
+                    totalGoals += ((Number) live.get("scoreA")).intValue()
+                            + ((Number) live.get("scoreB")).intValue();
+                    Map<?, ?> first = (Map<?, ?>) live.get("first");
+                    Map<?, ?> second = (Map<?, ?>) live.get("second");
+                    totalFouls += ((Number) first.get("foulsA")).intValue()
+                            + ((Number) first.get("foulsB")).intValue()
+                            + ((Number) second.get("foulsA")).intValue()
+                            + ((Number) second.get("foulsB")).intValue();
+
+                    // Actualizar temporalmente la tabla de goleadores.
+                    for (Object item : (List<?>) live.get("events")) {
+                        Map<?, ?> event = (Map<?, ?>) item;
+                        if (!"GOL".equals(event.get("type"))) continue;
+                        boolean home = "A".equals(event.get("side"));
+                        Long teamId = home ? game.aId : game.bId;
+                        if (teamId == null) continue;
+                        String player = String.valueOf(event.get("player"));
+                        String key = teamId + "/" + player;
+                        Map<String, Object> scorer = scorersByKey.get(key);
+                        if (scorer == null) {
+                            scorer = object("player", player,
+                                    "team", home ? safe(game.aName) : safe(game.bName),
+                                    "teamId", teamId, "goals", 0, "matches", 0);
+                            scorersByKey.put(key, scorer);
+                        }
+                        scorer.put("goals", ((Number) scorer.get("goals")).intValue() + 1);
+                    }
+                }
                 matches.add(match);
             }
 
@@ -331,6 +369,8 @@ public final class ArenaDataServlet extends HttpServlet {
                             15,
                             "totalGoals",
                             totalGoals,
+                            "live",
+                            live,
                             "totalFouls",
                             totalFouls,
                             "teams",

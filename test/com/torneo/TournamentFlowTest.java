@@ -8,6 +8,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.*;
 
 /** Verifica la rúbrica contra MySQL: 16 equipos, 15 partidos y un campeón persistido. */
@@ -129,5 +130,47 @@ public class TournamentFlowTest {
                     d.report.first.passesA + d.report.second.passesA, d.report.total().passesA);
         }
         assertThrows(Store.RuleException.class, Store::simulateRemaining);
+        // Tercera edición: transmisión real controlada por reloj persistente.
+        Store.createTournament(
+                "Copa en vivo " + suffix, "", LocalDate.now(),
+                LocalDate.now().plusDays(10), new BigDecimal("350000.00"),
+                teamIds, "LIVE");
+        Instant start = Instant.now().plusSeconds(2);
+        Map<String, Object> kickoff = LiveTournament.tickAt(start);
+        assertEquals("LIVE", kickoff.get("mode"));
+        assertEquals("PLAYING", kickoff.get("phase"));
+        assertEquals(0, Store.load().finalized,
+                "El marcador definitivo no debe publicarse antes de 60 segundos");
+        assertThrows(Store.RuleException.class, Store::simulateRemaining,
+                "La simulación inmediata no debe pisar un torneo en vivo");
+
+        Store.Match firstLive = Store.load().round(1).get(0);
+        assertThrows(Store.RuleException.class,
+                () -> Store.recordScore(firstLive.id, 2, 1),
+                "No se permite registrar un resultado manual durante el vivo");
+
+        Map<String, Object> breakTime = LiveTournament.tickAt(start.plusSeconds(64));
+        assertEquals("BREAK", breakTime.get("phase"));
+        assertEquals(1, Store.load().finalized,
+                "Solo el primer encuentro debe haberse guardado");
+        // Dos espectadores consultan: no debe repetirse el resultado.
+        LiveTournament.tickAt(start.plusSeconds(64));
+        assertEquals(1, Store.load().finalized);
+
+        Map<String, Object> nextGame = LiveTournament.tickAt(start.plusSeconds(85));
+        assertEquals("PLAYING", nextGame.get("phase"));
+        assertNotEquals(firstLive.id, ((Number) nextGame.get("matchId")).longValue());
+
+        // Adelantamos el reloj: no depende de dejar una pestaña abierta.
+        Map<String, Object> completedLive = LiveTournament.tickAt(start.plusSeconds(1400));
+        assertEquals("FINISHED", completedLive.get("phase"));
+        Store.State liveFinished = Store.load();
+        assertEquals(15, liveFinished.finalized);
+        assertEquals("FINALIZADO", liveFinished.tournament.status);
+        assertNotNull(liveFinished.tournament.championId);
+        for (Store.Match game : liveFinished.matches) {
+            assertTrue(game.done());
+            assertNotNull(Store.loadMatchDetail(game.id).report);
+        }
     }
 }

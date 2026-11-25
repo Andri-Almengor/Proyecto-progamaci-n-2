@@ -71,109 +71,26 @@
   }
   /** Actualiza enlaces y permisos visibles de la barra de navegación. */
   function decorateNav(d) {
-    const header = $("body > header");
+    // El encabezado se genera en el servidor: nunca inventar roles en el DOM.
+    const header = $(".arena-ui-header");
     if (!header) return;
-    $$("a", header).forEach((a) => {
-      const text = a.textContent.toLowerCase().replace(/\s+/g, " ").trim();
-      if (text.includes("inicio")) a.href = go("inicio");
-      else if (text.includes("cuadro")) a.href = go("cuadro");
-      else if (text.includes("equipos")) a.href = go("equipos");
-      else if (text.includes("panel admin")) {
-        a.href = go("admin");
-        if (!d.user?.admin) a.classList.add("hidden");
-      }
-    });
-    // El prototipo incorporaba un nombre fijo; lo sustituimos por la sesión real.
-    const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
-    const texts = [];
-    while (walker.nextNode()) texts.push(walker.currentNode);
-    texts.forEach((node) => {
-      if (node.textContent.includes("Alex Mercer"))
-        node.textContent = node.textContent.replace(
-          "Alex Mercer",
-          d.user?.name || "Visitante",
-        );
-      if (node.textContent.includes("Sesión Activa"))
-        node.textContent = node.textContent.replace(
-          "Sesión Activa",
-          d.user ? d.user.role : "Sin iniciar sesión",
-        );
-      if (node.textContent.includes("Copa Premier 2026"))
-        node.textContent = node.textContent.replace(
-          "Copa Premier 2026",
-          d.tournament?.name || "Sin torneo activo",
-        );
-    });
-    // El rótulo del torneo de Stitch tiene datos de demostración: reemplazar toda la línea, no solo su nombre.
-    const ticker = $$(".font-label-md", header).find(
-      (el) =>
-        el.classList.contains("truncate") &&
-        el.textContent.includes("En Premios"),
-    );
+    const ticker = $("#arena-ticker-text", header);
     if (ticker) {
-      const t = d.tournament;
-      ticker.innerHTML = t
-        ? `<span class="text-secondary-fixed">${esc(t.name)}</span> · 16 EQUIPOS · PREMIO ₡ ${number(t.prize)} · ${d.finalized}/15 PARTIDOS · FINALIZACIÓN ${requestDate(t.end)}`
-        : '<span class="text-secondary-fixed">BRACKET ARENA 2026</span> · SIN TORNEO ACTIVO · LAS ESTADÍSTICAS APARECERÁN AL INICIAR EL TORNEO';
+      ticker.textContent = d.tournament
+        ? `${d.tournament.name} · 16 EQUIPOS · PREMIO ₡ ${number(d.tournament.prize)} · ${d.finalized}/15 PARTIDOS`
+        : "BRACKET ARENA 2026 · LAS ESTADÍSTICAS APARECERÁN AL INICIAR EL TORNEO";
     }
-    const roleSelect = $("select", header);
-    if (roleSelect) {
-      roleSelect.innerHTML = `<option value="${d.user?.role || "VISITANTE"}">${d.user?.role || "VISITANTE"}</option>`;
-      roleSelect.disabled = true;
-      roleSelect.setAttribute("aria-label", "Rol de la sesión actual");
+    const status = $("#arena-ticker-status", header);
+    if (status) {
+      status.textContent = d.live?.phase === "PLAYING"
+        ? "● EN VIVO" : d.live?.phase === "BREAK"
+          ? "DESCANSO" : d.tournament?.status === "FINALIZADO"
+            ? "TORNEO FINALIZADO" : d.tournament ? "TORNEO ACTIVO" : "TEMPORADA 2026";
     }
-    const badge = $$("span", header).find(
-      (el) => el.children.length === 0 && el.textContent.trim() === "En Vivo",
-    );
-    if (badge)
-      badge.textContent =
-        d.tournament?.status === "ACTIVO"
-          ? "EN CURSO"
-          : d.tournament?.status === "FINALIZADO"
-            ? "FINALIZADO"
-            : "SIN TORNEO";
-    const server = $$("span", header).find(
-      (el) =>
-        el.children.length === 0 &&
-        el.textContent.trim() === "SERVIDORES ONLINE",
-    );
-    if (server) server.textContent = "DATOS ACTUALIZADOS";
-    // El selector "Usuario" del prototipo funciona como acceso a la sesión real.
-    $$("button", header).forEach((b) => {
-      if (
-        b.textContent.includes("Usuario") ||
-        b.textContent.includes("Visitante")
-      ) {
-        b.addEventListener("click", () => {
-          location.href = d.user ? go("equipos") : go("login");
-        });
-      }
+    $$("[data-arena-theme]", header).forEach((button) => {
+      button.onclick = () => setTheme(button.dataset.arenaTheme);
     });
-    // Modo visual original: Monolith y Obsidian. La selección persiste en el navegador.
-    $$("button", header).forEach((b) => {
-      const text = b.textContent.toLowerCase();
-      if (text.includes("monolith"))
-        b.addEventListener("click", () => setTheme("light"));
-      if (text.includes("obsidian"))
-        b.addEventListener("click", () => setTheme("dark"));
-    });
-    setTheme(
-      localStorage.getItem("arena-theme") === "dark" ? "dark" : "light",
-      false,
-    );
-    const alert = d.user ? null : null;
-    if (d.user) {
-      const group = header.querySelector("nav");
-      if (group && !$("[data-arena-logout]", header)) {
-        const f = document.createElement("form");
-        f.method = "POST";
-        f.action = base + "/app";
-        f.className = "arena-logout";
-        f.dataset.arenaLogout = "";
-        f.innerHTML = `<input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="logout"><button type="submit" aria-label="Cerrar sesión">Salir</button>`;
-        group.appendChild(f);
-      }
-    }
+    setTheme(localStorage.getItem("arena-theme") === "dark" ? "dark" : "light", false);
   }
   /** Aplica el tema visual definido por la interfaz original. */
   function setTheme(mode, save = true) {
@@ -291,7 +208,9 @@
           if (n.textContent.includes("/"))
             n.textContent = `${roundNames[r - 1]}: ${d.matches.filter((m) => m.round === r && m.done).length}/${d.matches.filter((m) => m.round === r).length || [8, 4, 2][r - 1]}`;
         }
-      const progress = $('div[style*="width: 80%"]', hero);
+      const progress = $('[data-arena-progress]', hero) ||
+        $('div[style*="width: 80%"]', hero);
+      if (progress) progress.dataset.arenaProgress = "";
       if (progress)
         progress.style.width =
           (t ? Math.round((d.finalized / 15) * 100) : 0) + "%";
@@ -386,10 +305,7 @@
         const btn = $("button", final);
         if (btn) {
           btn.disabled = !m?.done;
-          btn.addEventListener(
-            "click",
-            () => m?.done && (location.href = go("partido", `&id=${m.id}`)),
-          );
+          btn.onclick = () => m?.done && (location.href = go("partido", `&id=${m.id}`));
         }
         const counter = locateText(final, "CUENTA REGRESIVA");
         counter.forEach((e) => (e.textContent = "FECHA DE FINALIZACIÓN"));
@@ -397,7 +313,7 @@
         score.forEach((e) => (e.textContent = requestDate(t.end)));
         if (m?.done) {
           const target = $("h2", final)?.parentElement;
-          if (target) {
+          if (target && !target.querySelector(".arena-champion")) {
             const chip = document.createElement("p");
             chip.className = "arena-champion";
             chip.textContent = `🏆 CAMPEÓN: ${t.championName}`;
@@ -417,7 +333,7 @@
             : "Registrá tu equipo para participar en la siguiente edición. El administrador deberá aprobar tu inscripción.";
       const button = $("button", cta);
       if (button)
-        button.addEventListener("click", () => (location.href = go("equipos")));
+        button.onclick = () => (location.href = go("equipos"));
       const a = $("a", cta);
       if (a) a.href = d.user?.admin ? go("admin") : go("login");
     }
@@ -501,7 +417,7 @@
         : /cuartos/i.test(b.textContent)
           ? 2
           : 1;
-      b.addEventListener("click", () => {
+      b.onclick = () => {
         fill(n);
         buttons.forEach((el) => {
           el.classList.remove("bg-primary", "text-on-primary");
@@ -509,7 +425,7 @@
         });
         b.classList.add("bg-primary", "text-on-primary");
         b.classList.remove("bg-surface-container");
-      });
+      };
     });
     const h = sec.querySelector("h2");
     if (h) h.textContent = "ENFRENTAMIENTOS DESTACADOS";
@@ -636,6 +552,7 @@
         card.dataset.date = "Fecha no programada";
         card.dataset.stadium = "Ubicación no registrada";
         card.classList.toggle("arena-match-pending", !m.done);
+        card.classList.toggle("arena-match-in-play", !!m.live);
         const first = $$(".team-row", card);
         if (first.length >= 2) {
           [0, 1].forEach((side) => {
@@ -653,7 +570,7 @@
             );
             if (badge) badge.textContent = teamId ? short(name) : "·";
             const pill = $(".score-pill", row);
-            if (pill) pill.textContent = m.done ? String(score) : "—";
+            if (pill) pill.textContent = m.done || m.live ? String(score) : "—";
             row.classList.toggle(
               "arena-bracket-winner",
               !!m.done && m.winnerId === teamId,
@@ -669,7 +586,7 @@
           if (nameSpans[1]) nameSpans[1].textContent = m.bName || "Por definir";
           $$(".score-pill", card).forEach(
             (x, i) =>
-              (x.textContent = m.done ? String(i ? m.scoreB : m.scoreA) : "—"),
+              (x.textContent = m.done || m.live ? String(i ? m.scoreB : m.scoreA) : "—"),
           );
         }
         const header = $("div.flex.items-center.justify-between span", card);
@@ -680,11 +597,12 @@
           last.innerHTML = `<span class="text-secondary">${m.done ? "Clasificado: " + esc(card.dataset.winner) : "Camino a la final"}</span><span>${m.done ? "90\u2032" : "Por jugar"}</span>`;
         card.setAttribute("tabindex", "0");
         card.setAttribute("role", "button");
-        card.addEventListener("click", () => openMatchDrawer(m, card));
+        card.addEventListener("click", () => openMatchDrawer(
+          state.data?.matches.find((x) => x.id === m.id) || m, card));
         card.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            openMatchDrawer(m, card);
+            openMatchDrawer(state.data?.matches.find((x) => x.id === m.id) || m, card);
           }
         });
       }
@@ -768,6 +686,9 @@
     const drawer = $("#match-drawer"),
       backdrop = $("#drawer-backdrop");
     if (!drawer) return;
+    drawer.dataset.currentMatchId = String(m.id);
+    const live = state.data?.live;
+    const inProgress = !!m.live && live?.phase === "PLAYING";
     const fields = {
       "#drawer-match-code": `PARTIDO ${m.position}`,
       "#drawer-stage-badge": [
@@ -779,9 +700,11 @@
       ][m.round],
       "#drawer-team-1": m.aName || "Por definir",
       "#drawer-team-2": m.bName || "Por definir",
-      "#drawer-score-1": m.done ? m.scoreA : "—",
-      "#drawer-score-2": m.done ? m.scoreB : "—",
-      "#drawer-winner": m.done ? card.dataset.winner : "Por definir",
+      "#drawer-score-1": m.done || inProgress ? m.scoreA : "—",
+      "#drawer-score-2": m.done || inProgress ? m.scoreB : "—",
+      "#drawer-winner": inProgress
+        ? "EN VIVO · MINUTO " + live.minute
+        : m.done ? card.dataset.winner : "Por definir",
       "#drawer-stadium": "Sede no registrada",
     };
     Object.entries(fields).forEach(([q, value]) => {
@@ -789,18 +712,24 @@
       if (e) e.textContent = String(value);
     });
     // El contenido de los eventos y comparativas del drawer proviene de los mismos datos persistidos.
-    const timeline = $$("span", drawer)
+    const timeline = $(".arena-drawer-timeline", drawer) || $("span", drawer)
       .find((e) => e.textContent.includes("14' GOL"))
       ?.closest(".space-y-2");
+    if (timeline) timeline.classList.add("arena-drawer-timeline");
+    const matchEvents = m.report?.events || (inProgress
+      ? (live.events || []).map((event) => ({
+          ...event, team: event.side === "A" ? m.aName : m.bName
+        }))
+      : []);
     if (timeline) {
-      timeline.innerHTML = m.report?.events?.length
-        ? m.report.events
+      timeline.innerHTML = matchEvents.length
+        ? matchEvents
             .map(
               (e) =>
                 `<div class="flex justify-between gap-2 border-b border-outline py-2 text-[11px]"><span class="text-secondary font-bold">${e.minute}' ${e.type}</span><span>${esc(e.player)} · ${esc(e.team)}</span></div>`,
             )
             .join("")
-        : `<p class="p-3 text-sm">${m.done ? "No hay eventos disponibles" : "Este encuentro todavía no ha iniciado."}</p>`;
+        : `<p class="p-3 text-sm">${inProgress ? "El partido está en juego. Los eventos aparecerán durante los próximos minutos." : m.done ? "No hay eventos disponibles" : "Este encuentro todavía no ha iniciado."}</p>`;
     }
     const numbers = $$("div.font-bold", drawer).filter(
       (e) =>
@@ -808,7 +737,14 @@
         e.textContent.includes("9 vs 3") ||
         e.textContent.includes("11 vs 14"),
     );
-    const stats = m.report?.total;
+    const stats = m.report?.total || (inProgress ? {
+      possessionA: live.first?.possessionA ?? 50,
+      possessionB: live.first?.possessionB ?? 50,
+      onA: (live.first?.onA || 0) + (live.second?.onA || 0),
+      onB: (live.first?.onB || 0) + (live.second?.onB || 0),
+      foulsA: (live.first?.foulsA || 0) + (live.second?.foulsA || 0),
+      foulsB: (live.first?.foulsB || 0) + (live.second?.foulsB || 0)
+    } : null);
     if (stats)
       numbers.forEach((el, i) => {
         const val =
@@ -875,12 +811,14 @@
   }
   /** Presenta controles de administración según el rol de usuario. */
   function drawAdmin(d) {
-    const sections = $$("main section");
+    const sections = $("main section").filter((element) => element.id !== "arena-live-panel");
     const panel = sections[0],
       batch = sections[1],
       management = sections[2],
       registry = sections[3];
     const active = d.tournament?.status === "ACTIVO";
+    const runningLive = d.live?.mode === "LIVE" &&
+      (d.live.phase === "PLAYING" || d.live.phase === "BREAK");
     const adminWalker = document.createTreeWalker(
         $("main"),
         NodeFilter.SHOW_TEXT,
@@ -938,7 +876,25 @@
     }
     if (batch) {
       const b = $("#open-batch-sim-modal");
-      if (b) b.disabled = !active;
+      if (b) b.disabled = !active || runningLive;
+      // Alternativa a la simulación completa para un torneo ya creado.
+      let liveControls = $("#arena-admin-live-controls");
+      if (!liveControls) {
+        liveControls = document.createElement("div");
+        liveControls.id = "arena-admin-live-controls";
+        liveControls.className = "arena-admin-live-options";
+        batch.appendChild(liveControls);
+      }
+      liveControls.innerHTML = runningLive
+        ? '<strong>● TRANSMISIÓN EN VIVO ACTIVA</strong><p>Cada partido dura 60 segundos y existe una pausa de 20 segundos. Inicio y Cuadro se sincronizan para todos los visitantes. Los resultados manuales están bloqueados durante la secuencia.</p>'
+        : active && d.live?.mode !== "LIVE"
+          ? '<strong>SIMULACIÓN PARTIDO POR PARTIDO</strong><p>Transmitir cada encuentro en vivo a todos los visitantes, con goles y estadísticas minuto a minuto.</p><button type="button" class="arena-action" id="arena-start-live">▶ Iniciar transmisión en vivo (60 s / partido)</button>'
+          : '<p>Creá un torneo activo para iniciar la transmisión secuencial.</p>';
+      $("#arena-start-live")?.addEventListener("click", () => {
+        if (confirm("Se iniciarán los encuentros en vivo, uno cada 60 segundos con pausas de 20 segundos. ¿Continuar?")) {
+          submit("tournament.simulateLive", {}, d.csrf);
+        }
+      });
       b?.addEventListener("click", () =>
         $("#batch-sim-modal")?.classList.remove("hidden"),
       );
@@ -993,10 +949,10 @@
             ${
               m.done
                 ? `<a class="arena-action-secondary" href="${go("partido", `&id=${m.id}`)}"><span class="material-symbols-outlined text-sm">receipt_long</span> Ver ficha técnica</a>`
-                : m.ready
+                : m.ready && !runningLive
                   ? `<form method="post" action="${base}/app" class="arena-admin-result"><input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="match.result"><input type="hidden" name="matchId" value="${m.id}"><div><label>Goles local <input type="number" min="0" max="999" name="scoreA" value="0" required></label><label>Goles visitante <input type="number" min="0" max="999" name="scoreB" value="0" required></label></div><button type="submit" class="arena-action-secondary">✓ Confirmar resultado y avanzar</button></form>
               <form method="post" action="${base}/app" class="arena-admin-result" data-sim-form><input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="match.simulate"><input type="hidden" name="matchId" value="${m.id}"><button class="arena-action" type="submit">⚡ Simular este partido</button></form>`
-                  : `<p class="text-on-surface-variant text-sm">Esperando clasificados de la ronda anterior.</p>`
+                  : `<p class="text-on-surface-variant text-sm">${runningLive && m.ready ? "Partido gestionado por la transmisión en vivo." : "Esperando clasificados de la ronda anterior."}</p>`
             }
             </div>`;
                 })
@@ -1109,6 +1065,10 @@
       return;
     }
     const main = $("main");
+    if (m.live && d.live?.phase === "PLAYING") {
+      main.innerHTML = '<section class="max-w-4xl mx-auto py-12 px-margin"><h1 class="font-headline-xl text-headline-xl">PARTIDO EN VIVO</h1><p class="mt-3">El marcador y las estadísticas se actualizan automáticamente. El resultado definitivo se guardará al terminar el minuto 90 virtual.</p><a class="arena-action mt-4" href="' + go("cuadro") + '">Ver cuadro completo</a></section>';
+      return;
+    }
     if (!m.done || !m.report) {
       main.innerHTML = `<div class="max-w-4xl mx-auto py-20 px-margin">${note("El encuentro todavía no tiene marcador. Cuando se registre el resultado, podrás consultar el replay y sus estadísticas.", "PARTIDO TODAVÍA NO DISPUTADO")}<a href="${go("cuadro")}" class="arena-action">Volver al cuadro</a></div>`;
       return;
@@ -1442,12 +1402,216 @@
         alert("La fecha final no puede ser anterior a la inicial.");
         return;
       }
-      const msg = form.elements.autoSimulate.checked
-        ? "Esto simulará de inmediato los 15 partidos y determinará al campeón. ¿Continuar?"
-        : "Se creará el cuadro de eliminación con 16 equipos. ¿Continuar?";
+      const mode = form.elements.simulationMode?.value || "MANUAL";
+      const msg = mode === "INSTANT"
+        ? "Se simularán los 15 partidos inmediatamente. ¿Confirmás?"
+        : mode === "LIVE"
+          ? "Los encuentros empezarán automáticamente: 60 segundos por partido y 20 de descanso. Todos los visitantes verán el marcador en vivo. ¿Confirmás?"
+          : "Se crearán las llaves y los marcadores quedarán pendientes. ¿Continuar?";
       if (!confirm(msg)) e.preventDefault();
     });
   }
+  /**
+   * Panel visible para todos los visitantes mientras la copa se disputa.
+   * Usa únicamente goles/eventos hasta el minuto actual recibido del servidor.
+   */
+  function renderLivePanel(d) {
+    const main = $("main");
+    if (!main) return;
+    let panel = $("#arena-live-panel");
+    const live = d.live || {};
+    if (live.mode !== "LIVE" || live.phase === "FINISHED") {
+      panel?.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "arena-live-panel";
+      panel.className = "arena-live-panel";
+      panel.setAttribute("aria-label", "Marcador del torneo en vivo");
+      panel.setAttribute("aria-live", "polite");
+      main.insertBefore(panel, main.firstChild);
+    }
+    if (live.phase === "BREAK") {
+      const next = d.matches.find((m) => m.id === live.nextMatchId);
+      const last = [...d.matches].filter((m) => m.done).pop();
+      panel.innerHTML =
+        '<div class="arena-live-heading"><strong class="arena-live-indicator">DESCANSO ENTRE ENCUENTROS</strong><span>Próximo partido en ' +
+        esc(live.remainingSeconds) + ' segundos</span></div>' +
+        '<p>Último resultado: <strong>' +
+        esc(last ? (last.aName + " " + last.scoreA + " – " + last.scoreB + " " + last.bName) : "Por definir") +
+        '</strong></p><p>Siguiente: <strong>' +
+        esc(next ? (next.aName + " vs " + next.bName) : "Por definir") +
+        '</strong></p>';
+      return;
+    }
+    if (live.phase !== "PLAYING") return;
+    const match = d.matches.find((m) => m.id === live.matchId);
+    if (!match) return;
+    const first = live.first || {}, second = live.second || {};
+    const total = (key) => Number(first[key] || 0) + Number(second[key] || 0);
+    const possession = (Number(first.possessionA || 50) * Math.min(live.minute,45) +
+      Number(second.possessionA || 50) * Math.max(live.minute-45,0)) /
+      Math.max(1,live.minute);
+    const metric = (label, home, away) =>
+      '<div class="arena-live-metric"><small>' + esc(label) + '</small><strong>' +
+      esc(home) + ' – ' + esc(away) + '</strong></div>';
+    const events = (live.events || []).slice(-6).reverse().map((event) =>
+      '<span>' + esc(event.minute) + "' " + esc(event.type) + " · " +
+      esc(event.side === "A" ? match.aName : match.bName) + " · " +
+      esc(event.player) + '</span>').join("<br>");
+    panel.innerHTML =
+      '<div class="arena-live-heading"><strong class="arena-live-indicator">● PARTIDO EN VIVO · ' +
+      esc(["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][match.round]) +
+      ' ' + esc(match.position) + '</strong><span>Minuto ' + esc(live.minute) +
+      "' / 90 · " + esc(live.remainingSeconds) + ' s restantes</span></div>' +
+      '<div class="arena-live-score"><strong>' + esc(match.aName || "Por definir") +
+      '</strong><span class="arena-score-numbers">' + esc(live.scoreA) + ' : ' +
+      esc(live.scoreB) + '</span><strong>' + esc(match.bName || "Por definir") +
+      '</strong></div><div class="arena-live-metrics">' +
+      metric("Posesión (%)", Math.round(possession), 100 - Math.round(possession)) +
+      metric("Pases", total("passesA"), total("passesB")) +
+      metric("Tiros", total("shotsA"), total("shotsB")) +
+      metric("Tiros al arco", total("onA"), total("onB")) +
+      metric("Faltas", total("foulsA"), total("foulsB")) +
+      metric("Córners", total("cornersA"), total("cornersB")) +
+      '</div><div class="arena-live-events">' +
+      (events || 'Aún no hay goles ni sustituciones.') +
+      '</div><p class="mt-2"><a href="' + go("partido", "&id=" + match.id) +
+      '">Ver pantalla del partido</a> · Datos simulados</p>';
+  }
+
+  /**
+   * Actualiza nombres, goles y clasificados en la misma estructura de Stitch.
+   * No reinstala listeners de zoom ni filtros al llegar cada minuto.
+   */
+  function updateLiveBracket(d) {
+    for (const card of $("[data-real-match-id]", $("main"))) {
+      const match = d.matches.find((m) => m.id === Number(card.dataset.realMatchId));
+      if (!match) continue;
+      card.dataset.t1 = match.aName || "Por definir";
+      card.dataset.t2 = match.bName || "Por definir";
+      card.dataset.s1 = match.scoreA == null ? "—" : String(match.scoreA);
+      card.dataset.s2 = match.scoreB == null ? "—" : String(match.scoreB);
+      card.dataset.winner = match.done
+        ? (match.winnerId === match.aId ? match.aName : match.bName) : "Por definir";
+      card.classList.toggle("arena-match-in-play", !!match.live);
+      card.classList.toggle("arena-match-pending", !match.done);
+      const rows = $(".team-row", card);
+      if (rows.length >= 2) {
+        rows.slice(0, 2).forEach((row, side) => {
+          const name = side ? match.bName : match.aName;
+          const id = side ? match.bId : match.aId;
+          const score = side ? match.scoreB : match.scoreA;
+          const label = $("span.truncate", row)[0];
+          if (label) label.textContent = name || "Por definir";
+          const pill = $(".score-pill", row);
+          if (pill) pill.textContent = match.done || match.live ? String(score) : "—";
+          row.classList.toggle("arena-bracket-winner", match.done && match.winnerId === id);
+          row.classList.toggle("arena-bracket-loser", match.done && match.winnerId !== id);
+        });
+      } else {
+        const names = $("span.truncate", card);
+        if (names[0]) names[0].textContent = match.aName || "Por definir";
+        if (names[1]) names[1].textContent = match.bName || "Por definir";
+        $(".score-pill", card).forEach((e, side) => {
+          e.textContent = match.done || match.live
+            ? String(side ? match.scoreB : match.scoreA) : "—";
+        });
+      }
+      const status = $("div.flex.items-center.justify-between span", card);
+      if (status) {
+        const label = ["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][match.round];
+        status.textContent = label + " " + match.position + " · " +
+          (match.live ? "● EN VIVO" : match.done ? "FINALIZADO" :
+            match.ready ? "LISTO" : "PENDIENTE");
+      }
+    }
+  }
+
+  /** Consulta periódicamente y sincroniza a todos los espectadores sin recargar. */
+  function startLivePolling() {
+    if (!["home", "bracket", "admin", "match"].includes(page)) return;
+    async function poll() {
+      if (document.visibilityState === "hidden") {
+        window.setTimeout(poll, 5000);
+        return;
+      }
+      let interval = 4500;
+      try {
+        const response = await fetch(base + "/arena-data", {
+          credentials: "same-origin", headers: { Accept: "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("La consulta en vivo falló");
+        const d = await response.json();
+        if (!d.ok) throw new Error(d.error);
+        const old = state.data;
+        if ((old?.tournament?.id ?? null) !== (d.tournament?.id ?? null)) {
+          location.reload();
+          return;
+        }
+        state.data = d;
+        decorateNav(d);
+        if (page === "home") {
+          if (d.finalized !== old?.finalized) drawHome(d);
+          else {
+            // Los goles de la transmisión se reflejan en las métricas y
+            // tabla de goleadores sin esperar al cierre del encuentro.
+            drawLeaders(d, section(5));
+            const cards = $("div.grid > div", section(2));
+            const values = [
+              d.tournament ? 16 : d.approved,
+              d.tournament ? 15 : 0,
+              d.finalized,
+              d.totalGoals
+            ];
+            cards.slice(0, 4).forEach((card, index) => {
+              const labels = $("p", card);
+              if (labels[1]) labels[1].textContent = number(values[index]);
+            });
+          }
+        }
+        if (page === "bracket") {
+          updateLiveBracket(d);
+          const drawer = $("#match-drawer");
+          if (drawer && !drawer.classList.contains("translate-x-full")) {
+            const current = d.matches.find(
+              (m) => m.id === Number(drawer.dataset.currentMatchId));
+            const card = current && $("[data-real-match-id]", $("main")).find(
+              (el) => Number(el.dataset.realMatchId) === current.id);
+            if (current && card) openMatchDrawer(current, card);
+          }
+        }
+        if (page === "match") {
+          const matchId = Number(new URLSearchParams(location.search).get("id"));
+          const previous = old?.matches?.find((m) => m.id === matchId);
+          const current = d.matches.find((m) => m.id === matchId);
+          if (previous?.live && current?.done) {
+            location.reload();
+            return;
+          }
+        }
+        renderLivePanel(d);
+        if (page === "admin" &&
+            (d.finalized !== old?.finalized ||
+             d.live?.mode !== old?.live?.mode ||
+             (d.live?.phase === "FINISHED") !== (old?.live?.phase === "FINISHED"))) {
+          // Actualizar controles al empezar o terminar la transmisión y
+          // cuando avanza cada clasificado, sin borrar formularios cada segundo.
+          drawAdmin(d);
+        }
+        interval = d.live?.phase === "PLAYING" ? 1500
+          : d.live?.phase === "BREAK" ? 2500 : 5500;
+      } catch (error) {
+        console.warn("Sincronización en vivo:", error);
+        interval = 6500;
+      }
+      window.setTimeout(poll, interval);
+    }
+    window.setTimeout(poll, 1500);
+  }
+
   /** Consulta /arena-data y activa la página y sus animaciones. */
   async function initialize() {
     try {
@@ -1475,6 +1639,8 @@
       else if (page === "teams") drawTeams(data);
       else if (page === "auth") drawAuth(data);
       else if (page === "create") drawCreate(data);
+      renderLivePanel(data);
+      startLivePolling();
     } catch (e) {
       console.error("Error cargando las estadísticas de torneo:", e);
       bannerError(

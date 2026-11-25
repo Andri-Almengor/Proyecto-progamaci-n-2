@@ -1,6 +1,6 @@
 # Base de datos de Bracket Arena (MySQL 8+)
 
-Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MySQL exclusiva, cargar **20 equipos de demostración 2026**, actualizar instalaciones existentes y verificar los resultados. El sistema utiliza **9 tablas** y conserva los partidos, resultados y estadísticas de cada torneo.
+Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MySQL exclusiva, cargar **20 equipos de demostración 2026**, actualizar instalaciones existentes y verificar los resultados. El sistema utiliza **10 tablas** y conserva los partidos, resultados y estadísticas de cada torneo.
 
 ## Estructura de carpetas
 
@@ -15,7 +15,7 @@ Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MyS
 
 | Archivo | Para qué sirve | ¿Modifica datos existentes? |
 |---|---|---|
-| `instalacion_completa_2026.sql` | **Instalación rápida**: crea base, 9 tablas, administrador web y 20 equipos | No borra; agrega solamente los que faltan |
+| `instalacion_completa_2026.sql` | **Instalación rápida**: crea base, 10 tablas, administrador web y 20 equipos | No borra; agrega solamente los que faltan |
 | `schema/torneos.sql` | Estructura completa + administrador de prueba | No borra; crea solo lo faltante |
 | `seeds/demo_20_equipos.sql` | Agrega 20 equipos sin duplicar; hasta 16 aprobados | Inserta nombres que faltan; no edita existentes |
 | `setup/usuario_aplicacion.sql` | Crea `torneos_app` con permisos mínimos de lectura/escritura | Crea/autoriza usuario MySQL; la contraseña es un placeholder |
@@ -29,7 +29,7 @@ Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MyS
 1. Abrí MySQL Workbench con una cuenta de MySQL que tenga permisos para crear bases de datos.
 2. Abrí **`database/instalacion_completa_2026.sql`** usando *File → Open SQL Script*.
 3. Presioná el rayo para ejecutar **todo el archivo**.
-4. Vas a tener la base `torneos`, sus nueve tablas, el administrador de demostración y los equipos de prueba.
+4. Vas a tener la base `torneos`, sus diez tablas, el administrador de demostración y los equipos de prueba.
 
 En una base realmente vacía el resultado es:
 
@@ -118,3 +118,17 @@ python database/generar_instalador.py
 ```
 
 El flujo de GitHub Actions verifica que el instalador esté sincronizado y prueba la carga de 20 equipos y su reejecución sin duplicados.
+
+
+## Migración del modo de transmisión en vivo (noviembre de 2026)
+
+**Si tu base de datos ya existe**, esta actualización incorpora una tabla nueva:
+
+1. Realizá un respaldo de la base `torneos`.
+2. Abrí y ejecutá `database/migrations/upgrade_live_tournaments.sql` como administrador de MySQL.
+3. Actualizá el repositorio con `git pull origin main` cuando el PR se fusione, reiniciá NetBeans/Tomcat y ejecutá el proyecto.
+4. En Administración podés seleccionar el modo **Manual**, **Instantáneo** o **Transmisión en vivo**.
+
+La tabla `tournament_live_runs` guarda la secuencia actual, el inicio del encuentro, el siguiente inicio y un plan deportivo determinista. No guarda contraseñas. Las tablas `matches`, `match_simulations`, `match_half_stats` y `match_events` conservan los resultados definitivos.
+
+El modo en vivo tarda aproximadamente **19 minutos y 40 segundos** en disputar los 15 partidos si empieza con los octavos sin interrupciones: 60 segundos por encuentro y 20 segundos entre encuentros. La sesión del administrador puede cerrarse sin detener la secuencia. Para evitar cargas innecesarias, no se mantienen conexiones persistentes con todos los visitantes: cada navegador realiza consultas periódicas al servidor.
