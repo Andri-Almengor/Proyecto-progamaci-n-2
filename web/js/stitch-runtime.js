@@ -71,109 +71,26 @@
   }
   /** Actualiza enlaces y permisos visibles de la barra de navegación. */
   function decorateNav(d) {
-    const header = $("body > header");
+    // El encabezado se genera en el servidor: nunca inventar roles en el DOM.
+    const header = $(".arena-ui-header");
     if (!header) return;
-    $$("a", header).forEach((a) => {
-      const text = a.textContent.toLowerCase().replace(/\s+/g, " ").trim();
-      if (text.includes("inicio")) a.href = go("inicio");
-      else if (text.includes("cuadro")) a.href = go("cuadro");
-      else if (text.includes("equipos")) a.href = go("equipos");
-      else if (text.includes("panel admin")) {
-        a.href = go("admin");
-        if (!d.user?.admin) a.classList.add("hidden");
-      }
-    });
-    // El prototipo incorporaba un nombre fijo; lo sustituimos por la sesión real.
-    const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
-    const texts = [];
-    while (walker.nextNode()) texts.push(walker.currentNode);
-    texts.forEach((node) => {
-      if (node.textContent.includes("Alex Mercer"))
-        node.textContent = node.textContent.replace(
-          "Alex Mercer",
-          d.user?.name || "Visitante",
-        );
-      if (node.textContent.includes("Sesión Activa"))
-        node.textContent = node.textContent.replace(
-          "Sesión Activa",
-          d.user ? d.user.role : "Sin iniciar sesión",
-        );
-      if (node.textContent.includes("Copa Premier 2026"))
-        node.textContent = node.textContent.replace(
-          "Copa Premier 2026",
-          d.tournament?.name || "Sin torneo activo",
-        );
-    });
-    // El rótulo del torneo de Stitch tiene datos de demostración: reemplazar toda la línea, no solo su nombre.
-    const ticker = $$(".font-label-md", header).find(
-      (el) =>
-        el.classList.contains("truncate") &&
-        el.textContent.includes("En Premios"),
-    );
+    const ticker = $("#arena-ticker-text", header);
     if (ticker) {
-      const t = d.tournament;
-      ticker.innerHTML = t
-        ? `<span class="text-secondary-fixed">${esc(t.name)}</span> · 16 EQUIPOS · PREMIO ₡ ${number(t.prize)} · ${d.finalized}/15 PARTIDOS · FINALIZACIÓN ${requestDate(t.end)}`
-        : '<span class="text-secondary-fixed">BRACKET ARENA 2026</span> · SIN TORNEO ACTIVO · LAS ESTADÍSTICAS APARECERÁN AL INICIAR EL TORNEO';
+      ticker.textContent = d.tournament
+        ? `${d.tournament.name} · 16 EQUIPOS · PREMIO ₡ ${number(d.tournament.prize)} · ${d.finalized}/15 PARTIDOS`
+        : "BRACKET ARENA 2026 · LAS ESTADÍSTICAS APARECERÁN AL INICIAR EL TORNEO";
     }
-    const roleSelect = $("select", header);
-    if (roleSelect) {
-      roleSelect.innerHTML = `<option value="${d.user?.role || "VISITANTE"}">${d.user?.role || "VISITANTE"}</option>`;
-      roleSelect.disabled = true;
-      roleSelect.setAttribute("aria-label", "Rol de la sesión actual");
+    const status = $("#arena-ticker-status", header);
+    if (status) {
+      status.textContent = d.live?.phase === "PLAYING"
+        ? "● EN VIVO" : d.live?.phase === "BREAK"
+          ? "DESCANSO" : d.tournament?.status === "FINALIZADO"
+            ? "TORNEO FINALIZADO" : d.tournament ? "TORNEO ACTIVO" : "TEMPORADA 2026";
     }
-    const badge = $$("span", header).find(
-      (el) => el.children.length === 0 && el.textContent.trim() === "En Vivo",
-    );
-    if (badge)
-      badge.textContent =
-        d.tournament?.status === "ACTIVO"
-          ? "EN CURSO"
-          : d.tournament?.status === "FINALIZADO"
-            ? "FINALIZADO"
-            : "SIN TORNEO";
-    const server = $$("span", header).find(
-      (el) =>
-        el.children.length === 0 &&
-        el.textContent.trim() === "SERVIDORES ONLINE",
-    );
-    if (server) server.textContent = "DATOS ACTUALIZADOS";
-    // El selector "Usuario" del prototipo funciona como acceso a la sesión real.
-    $$("button", header).forEach((b) => {
-      if (
-        b.textContent.includes("Usuario") ||
-        b.textContent.includes("Visitante")
-      ) {
-        b.addEventListener("click", () => {
-          location.href = d.user ? go("equipos") : go("login");
-        });
-      }
+    $$("[data-arena-theme]", header).forEach((button) => {
+      button.onclick = () => setTheme(button.dataset.arenaTheme);
     });
-    // Modo visual original: Monolith y Obsidian. La selección persiste en el navegador.
-    $$("button", header).forEach((b) => {
-      const text = b.textContent.toLowerCase();
-      if (text.includes("monolith"))
-        b.addEventListener("click", () => setTheme("light"));
-      if (text.includes("obsidian"))
-        b.addEventListener("click", () => setTheme("dark"));
-    });
-    setTheme(
-      localStorage.getItem("arena-theme") === "dark" ? "dark" : "light",
-      false,
-    );
-    const alert = d.user ? null : null;
-    if (d.user) {
-      const group = header.querySelector("nav");
-      if (group && !$("[data-arena-logout]", header)) {
-        const f = document.createElement("form");
-        f.method = "POST";
-        f.action = base + "/app";
-        f.className = "arena-logout";
-        f.dataset.arenaLogout = "";
-        f.innerHTML = `<input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="logout"><button type="submit" aria-label="Cerrar sesión">Salir</button>`;
-        group.appendChild(f);
-      }
-    }
+    setTheme(localStorage.getItem("arena-theme") === "dark" ? "dark" : "light", false);
   }
   /** Aplica el tema visual definido por la interfaz original. */
   function setTheme(mode, save = true) {
@@ -1442,9 +1359,12 @@
         alert("La fecha final no puede ser anterior a la inicial.");
         return;
       }
-      const msg = form.elements.autoSimulate.checked
-        ? "Esto simulará de inmediato los 15 partidos y determinará al campeón. ¿Continuar?"
-        : "Se creará el cuadro de eliminación con 16 equipos. ¿Continuar?";
+      const mode = form.elements.simulationMode?.value || "MANUAL";
+      const msg = mode === "INSTANT"
+        ? "Se simularán los 15 partidos inmediatamente. ¿Confirmás?"
+        : mode === "LIVE"
+          ? "Los encuentros empezarán automáticamente: 60 segundos por partido y 20 de descanso. Todos los visitantes verán el marcador en vivo. ¿Confirmás?"
+          : "Se crearán las llaves y los marcadores quedarán pendientes. ¿Continuar?";
       if (!confirm(msg)) e.preventDefault();
     });
   }
