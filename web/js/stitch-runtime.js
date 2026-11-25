@@ -1565,10 +1565,13 @@
           }
         }
         renderLivePanel(d);
-        if (page === "admin" && d.finalized !== old?.finalized) {
-          // Los formularios administrativos cambian cuando avanzan ganadores.
-          // Recalcular el contenido solamente entre encuentros.
-          if (d.live?.phase !== "PLAYING") drawAdmin(d);
+        if (page === "admin" &&
+            (d.finalized !== old?.finalized ||
+             d.live?.mode !== old?.live?.mode ||
+             (d.live?.phase === "FINISHED") !== (old?.live?.phase === "FINISHED"))) {
+          // Actualizar controles al empezar o terminar la transmisión y
+          // cuando avanza cada clasificado, sin borrar formularios cada segundo.
+          drawAdmin(d);
         }
         interval = d.live?.phase === "PLAYING" ? 1500
           : d.live?.phase === "BREAK" ? 2500 : 5500;
