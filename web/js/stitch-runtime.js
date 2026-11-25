@@ -799,6 +799,8 @@
       management = sections[2],
       registry = sections[3];
     const active = d.tournament?.status === "ACTIVO";
+    const runningLive = d.live?.mode === "LIVE" &&
+      (d.live.phase === "PLAYING" || d.live.phase === "BREAK");
     const adminWalker = document.createTreeWalker(
         $("main"),
         NodeFilter.SHOW_TEXT,
@@ -856,7 +858,25 @@
     }
     if (batch) {
       const b = $("#open-batch-sim-modal");
-      if (b) b.disabled = !active;
+      if (b) b.disabled = !active || runningLive;
+      // Alternativa a la simulación completa para un torneo ya creado.
+      let liveControls = $("#arena-admin-live-controls");
+      if (!liveControls) {
+        liveControls = document.createElement("div");
+        liveControls.id = "arena-admin-live-controls";
+        liveControls.className = "arena-admin-live-options";
+        batch.appendChild(liveControls);
+      }
+      liveControls.innerHTML = runningLive
+        ? '<strong>● TRANSMISIÓN EN VIVO ACTIVA</strong><p>Cada partido dura 60 segundos y existe una pausa de 20 segundos. Inicio y Cuadro se sincronizan para todos los visitantes. Los resultados manuales están bloqueados durante la secuencia.</p>'
+        : active && d.live?.mode !== "LIVE"
+          ? '<strong>SIMULACIÓN PARTIDO POR PARTIDO</strong><p>Transmitir cada encuentro en vivo a todos los visitantes, con goles y estadísticas minuto a minuto.</p><button type="button" class="arena-action" id="arena-start-live">▶ Iniciar transmisión en vivo (60 s / partido)</button>'
+          : '<p>Creá un torneo activo para iniciar la transmisión secuencial.</p>';
+      $("#arena-start-live")?.addEventListener("click", () => {
+        if (confirm("Se iniciarán los encuentros en vivo, uno cada 60 segundos con pausas de 20 segundos. ¿Continuar?")) {
+          submit("tournament.simulateLive", {}, d.csrf);
+        }
+      });
       b?.addEventListener("click", () =>
         $("#batch-sim-modal")?.classList.remove("hidden"),
       );
@@ -911,10 +931,10 @@
             ${
               m.done
                 ? `<a class="arena-action-secondary" href="${go("partido", `&id=${m.id}`)}"><span class="material-symbols-outlined text-sm">receipt_long</span> Ver ficha técnica</a>`
-                : m.ready
+                : m.ready && !runningLive
                   ? `<form method="post" action="${base}/app" class="arena-admin-result"><input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="match.result"><input type="hidden" name="matchId" value="${m.id}"><div><label>Goles local <input type="number" min="0" max="999" name="scoreA" value="0" required></label><label>Goles visitante <input type="number" min="0" max="999" name="scoreB" value="0" required></label></div><button type="submit" class="arena-action-secondary">✓ Confirmar resultado y avanzar</button></form>
               <form method="post" action="${base}/app" class="arena-admin-result" data-sim-form><input type="hidden" name="csrf" value="${esc(d.csrf)}"><input type="hidden" name="action" value="match.simulate"><input type="hidden" name="matchId" value="${m.id}"><button class="arena-action" type="submit">⚡ Simular este partido</button></form>`
-                  : `<p class="text-on-surface-variant text-sm">Esperando clasificados de la ronda anterior.</p>`
+                  : `<p class="text-on-surface-variant text-sm">${runningLive && m.ready ? "Partido gestionado por la transmisión en vivo." : "Esperando clasificados de la ronda anterior."}</p>`
             }
             </div>`;
                 })
@@ -1027,6 +1047,10 @@
       return;
     }
     const main = $("main");
+    if (m.live && d.live?.phase === "PLAYING") {
+      main.innerHTML = '<section class="max-w-4xl mx-auto py-12 px-margin"><h1 class="font-headline-xl text-headline-xl">PARTIDO EN VIVO</h1><p class="mt-3">El marcador y las estadísticas se actualizan automáticamente. El resultado definitivo se guardará al terminar el minuto 90 virtual.</p><a class="arena-action mt-4" href="' + go("cuadro") + '">Ver cuadro completo</a></section>';
+      return;
+    }
     if (!m.done || !m.report) {
       main.innerHTML = `<div class="max-w-4xl mx-auto py-20 px-margin">${note("El encuentro todavía no tiene marcador. Cuando se registre el resultado, podrás consultar el replay y sus estadísticas.", "PARTIDO TODAVÍA NO DISPUTADO")}<a href="${go("cuadro")}" class="arena-action">Volver al cuadro</a></div>`;
       return;
