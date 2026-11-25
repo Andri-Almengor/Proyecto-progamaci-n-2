@@ -2,17 +2,26 @@
 
 Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MySQL exclusiva, cargar **20 equipos de demostración 2026**, actualizar instalaciones existentes y verificar los resultados. El sistema utiliza **9 tablas** y conserva los partidos, resultados y estadísticas de cada torneo.
 
+## Estructura de carpetas
+
+- `schema/`: tablas e índices.
+- `seeds/`: datos ficticios de práctica.
+- `migrations/`: cambios para instalaciones existentes.
+- `setup/`: usuario MySQL restringido.
+- `diagnostics/`: consultas de solo lectura.
+- Los scripts `instalacion_completa_2026.sql` y `generar_instalador.py` permanecen en `database/` para acceso rápido.
+
 ## Archivos
 
 | Archivo | Para qué sirve | ¿Modifica datos existentes? |
 |---|---|---|
 | `instalacion_completa_2026.sql` | **Instalación rápida**: crea base, 9 tablas, administrador web y 20 equipos | No borra; agrega solamente los que faltan |
-| `torneos.sql` | Estructura completa + administrador de prueba | No borra; crea solo lo faltante |
-| `demo_20_equipos.sql` | Agrega 20 equipos sin duplicar; hasta 16 aprobados | Inserta nombres que faltan; no edita existentes |
-| `usuario_aplicacion.sql` | Crea `torneos_app` con permisos mínimos de lectura/escritura | Crea/autoriza usuario MySQL; la contraseña es un placeholder |
-| `comprobaciones.sql` | Diagnóstico de tablas, cuentas, equipos, torneo, partidos y simulaciones | Solo lectura |
-| `upgrade_match_simulations.sql` | Añade tablas de estadísticas a una **base antigua** que ya tenga las tablas iniciales | No borra |
-| `demo_16_equipos.sql` | Semilla histórica alternativa con 16 equipos | Inserta sus equipos; **no combinar con la de 20** |
+| `schema/torneos.sql` | Estructura completa + administrador de prueba | No borra; crea solo lo faltante |
+| `seeds/demo_20_equipos.sql` | Agrega 20 equipos sin duplicar; hasta 16 aprobados | Inserta nombres que faltan; no edita existentes |
+| `setup/usuario_aplicacion.sql` | Crea `torneos_app` con permisos mínimos de lectura/escritura | Crea/autoriza usuario MySQL; la contraseña es un placeholder |
+| `diagnostics/comprobaciones.sql` | Diagnóstico de tablas, cuentas, equipos, torneo, partidos y simulaciones | Solo lectura |
+| `migrations/upgrade_match_simulations.sql` | Añade tablas de estadísticas a una **base antigua** que ya tenga las tablas iniciales | No borra |
+| `seeds/demo_16_equipos.sql` | Semilla histórica alternativa con 16 equipos | Inserta sus equipos; **no combinar con la de 20** |
 | `generar_instalador.py` | Regenera el instalador único a partir del esquema y la semilla de 20 equipos | Solo escribe archivo del repositorio |
 
 ## Opción A. Instalar desde cero en MySQL Workbench
@@ -36,7 +45,7 @@ También podés hacerlo desde la terminal de Windows **CMD** (ubicado en el dire
 mysql -u root -p < database\instalacion_completa_2026.sql
 ```
 
-**Alternativa equivalente:** ejecutar **primero** `torneos.sql` y **después** `demo_20_equipos.sql`. No hace falta ejecutar los tres.
+**Alternativa equivalente:** ejecutar **primero** `schema/torneos.sql` y **después** `seeds/demo_20_equipos.sql`. No hace falta ejecutar los tres.
 
 ## Opción B. Ya tenés una base con datos
 
@@ -46,8 +55,8 @@ mysql -u root -p < database\instalacion_completa_2026.sql
    mysqldump -u root -p --databases torneos > respaldo_torneos.sql
    ```
 
-2. Ejecutá `database/torneos.sql` para asegurar las tablas actuales. Si la base es muy antigua, podés usar `upgrade_match_simulations.sql` en lugar de recrear el esquema.
-3. Ejecutá `database/demo_20_equipos.sql` para agregar **solo** los nombres que no existan.
+2. Ejecutá `database/schema/torneos.sql` para asegurar las tablas actuales. Si la base es muy antigua, podés usar `migrations/upgrade_match_simulations.sql` en lugar de recrear el esquema.
+3. Ejecutá `database/seeds/demo_20_equipos.sql` para agregar **solo** los nombres que no existan.
 
 **Comportamiento de la semilla:**
 
@@ -58,11 +67,11 @@ mysql -u root -p < database\instalacion_completa_2026.sql
 - Si ya existe un equipo pendiente de los 20, seguirá pendiente. Podés gestionarlo desde Administración.
 - No crea partidos ni cambia resultados. El sistema debe generar los emparejamientos.
 
-**Atención:** el diseño de tablas usa `CREATE TABLE IF NOT EXISTS`. Eso no transforma columnas de esquemas incompatibles; para instalaciones mucho más antiguas, respalda y revisá antes de aplicar cambios. El archivo `upgrade_match_simulations.sql` está destinado específicamente a sumar las tres tablas de simulación.
+**Atención:** el diseño de tablas usa `CREATE TABLE IF NOT EXISTS`. Eso no transforma columnas de esquemas incompatibles; para instalaciones mucho más antiguas, respalda y revisá antes de aplicar cambios. El archivo `migrations/upgrade_match_simulations.sql` está destinado específicamente a sumar las tres tablas de simulación.
 
 ## Crear un usuario MySQL para Tomcat/NetBeans
 
-Ejecutá **`database/usuario_aplicacion.sql`** como administrador de MySQL tras crear `torneos`, pero **cambiá la contraseña de ejemplo del archivo antes de usarlo**.
+Ejecutá **`database/setup/usuario_aplicacion.sql`** como administrador de MySQL tras crear `torneos`, pero **cambiá la contraseña de ejemplo del archivo antes de usarlo**.
 
 El script otorga solo `SELECT`, `INSERT`, `UPDATE` y `DELETE` sobre `torneos.*`; la aplicación **no** necesita permisos para modificar la estructura.
 
@@ -80,7 +89,7 @@ La cuenta del sistema web es distinta del usuario MySQL. La cuenta académica in
 
 ## Verificar todo
 
-Ejecutá `database/comprobaciones.sql` o, como mínimo:
+Ejecutá `database/diagnostics/comprobaciones.sql` o, como mínimo:
 
 ```sql
 USE torneos;
@@ -102,7 +111,7 @@ SELECT id, name, status FROM tournaments ORDER BY id DESC LIMIT 5;
 
 ## Mantener el instalador sincronizado
 
-El instalador único es el contenido de `torneos.sql` seguido por `demo_20_equipos.sql`. Después de editar cualquiera de los dos, corré:
+El instalador único es el contenido de `schema/torneos.sql` seguido por `seeds/demo_20_equipos.sql`. Después de editar cualquiera de los dos, corré:
 
 ```bash
 python database/generar_instalador.py

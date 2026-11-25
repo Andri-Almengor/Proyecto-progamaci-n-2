@@ -1,5 +1,5 @@
 -- BRACKET ARENA | 20 equipos de demostración, edición 2026
--- Requisitos: MySQL 8+, database/torneos.sql aplicado previamente.
+-- Requisitos: MySQL 8+, database/schema/torneos.sql aplicado previamente.
 -- Ejecutar con una cuenta administradora de MySQL, NO con el usuario CRUD de la app.
 -- Es seguro repetirlo: NO borra equipos, NO modifica equipos existentes
 -- y NO inserta nada si hay un torneo ACTIVO.

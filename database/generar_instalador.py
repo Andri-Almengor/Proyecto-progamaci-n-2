@@ -1,22 +1,47 @@
 #!/usr/bin/env python3
-"""Regenera/verifica el instalador autocontenido desde los dos SQL fuente."""
+"""Genera el instalador SQL único desde el esquema y los datos de prueba.
+
+Desde la raíz del proyecto:
+    python database/generar_instalador.py
+    python database/generar_instalador.py --check
+
+Esta herramienta no abre conexiones a MySQL.
+"""
 from pathlib import Path
 import sys
 
-BASE = Path(__file__).resolve().parent
+DATABASE = Path(__file__).resolve().parent
+SCHEMA = DATABASE / "schema" / "torneos.sql"
+SEED = DATABASE / "seeds" / "demo_20_equipos.sql"
+INSTALLER = DATABASE / "instalacion_completa_2026.sql"
+
 HEADER = (
     "-- BRACKET ARENA | INSTALACION COMPLETA 2026 (MySQL 8+)\n"
     "-- Un solo archivo para MySQL Workbench: esquema + 20 equipos.\n"
     "-- No ejecuta DROP DATABASE ni borra registros existentes.\n"
-    "-- Usuario MySQL opcional: database/usuario_aplicacion.sql\n\n"
+    "-- Usuario MySQL opcional: database/setup/usuario_aplicacion.sql\n\n"
 )
-source = HEADER + (BASE / "torneos.sql").read_text(encoding="utf-8").rstrip() + "\n\n" + (BASE / "demo_20_equipos.sql").read_text(encoding="utf-8").rstrip() + "\n"
-output = BASE / "instalacion_completa_2026.sql"
-if "--check" in sys.argv:
-    if not output.exists() or output.read_text(encoding="utf-8") != source:
-        print("ERROR: instalacion_completa_2026.sql no coincide con los SQL de origen.")
-        sys.exit(1)
-    print("Instalador SQL sincronizado.")
-else:
-    output.write_text(source, encoding="utf-8", newline="\n")
-    print(f"Generado: {output}")
+
+
+def create_installer() -> str:
+    """Respeta el orden de instalación: primero tablas y luego equipos."""
+    schema = SCHEMA.read_text(encoding="utf-8").rstrip()
+    seed = SEED.read_text(encoding="utf-8").rstrip()
+    return f"{HEADER}{schema}\n\n{seed}\n"
+
+
+def main() -> int:
+    expected = create_installer()
+    if "--check" in sys.argv:
+        if not INSTALLER.is_file() or INSTALLER.read_text(encoding="utf-8") != expected:
+            print("ERROR: el instalador difiere de los scripts de origen.")
+            return 1
+        print("Instalador SQL sincronizado.")
+    else:
+        INSTALLER.write_text(expected, encoding="utf-8", newline="\n")
+        print(f"Generado: {INSTALLER}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
