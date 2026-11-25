@@ -233,30 +233,45 @@ public final class AppServlet extends HttpServlet {
                         }
                     }
 
+                    // Compatibilidad con formularios anteriores: autoSimulate=on.
+                    String mode = request.getParameter("simulationMode");
+                    if (mode == null || mode.isBlank()) {
+                        mode = "on".equals(request.getParameter("autoSimulate"))
+                                ? "INSTANT" : "MANUAL";
+                    }
                     Store.createTournament(
                             request.getParameter("name"),
                             request.getParameter("image"),
                             LocalDate.parse(request.getParameter("start")),
                             LocalDate.parse(request.getParameter("end")),
                             new BigDecimal(request.getParameter("prize")),
-                            selected);
+                            selected, mode);
 
-                    if ("on".equals(request.getParameter("autoSimulate"))) {
+                    if ("INSTANT".equals(mode)) {
                         Store.simulateRemaining();
                         target = "partido&id=" + Store.load().round(1).get(0).id + "&play=1";
-                        flash(
-                                request,
-                                "ok",
-                                "¡Torneo simulado! Elegí reproducir cada partido, "
-                                        + "saltarlo o ver directamente su resumen.");
+                        flash(request, "ok",
+                                "¡Torneo simulado! Los 15 resultados están disponibles.");
+                    } else if ("LIVE".equals(mode)) {
+                        target = "cuadro";
+                        flash(request, "ok",
+                                "¡Transmisión en vivo iniciada! Cada partido dura 60 segundos "
+                                + "y hay 20 segundos entre encuentros. "
+                                + "Inicio y Cuadro se actualizan automáticamente.");
                     } else {
                         target = "inicio";
-                        flash(
-                                request,
-                                "ok",
+                        flash(request, "ok",
                                 "¡Torneo creado! Podés simular partido a partido "
-                                        + "o ingresar los marcadores.");
+                                + "o ingresar los marcadores.");
                     }
+                }
+                case "tournament.simulateLive" -> {
+                    requireAdmin(request);
+                    LiveTournament.startActive();
+                    target = "admin";
+                    flash(request, "ok",
+                            "¡Modo en vivo iniciado! Los visitantes verán cada gol "
+                            + "y el avance de los clasificados automáticamente.");
                 }
                 case "tournament.simulateAll" -> {
                     requireAdmin(request);
