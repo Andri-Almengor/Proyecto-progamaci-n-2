@@ -208,7 +208,9 @@
           if (n.textContent.includes("/"))
             n.textContent = `${roundNames[r - 1]}: ${d.matches.filter((m) => m.round === r && m.done).length}/${d.matches.filter((m) => m.round === r).length || [8, 4, 2][r - 1]}`;
         }
-      const progress = $('div[style*="width: 80%"]', hero);
+      const progress = $('[data-arena-progress]', hero) ||
+        $('div[style*="width: 80%"]', hero);
+      if (progress) progress.dataset.arenaProgress = "";
       if (progress)
         progress.style.width =
           (t ? Math.round((d.finalized / 15) * 100) : 0) + "%";
@@ -303,10 +305,7 @@
         const btn = $("button", final);
         if (btn) {
           btn.disabled = !m?.done;
-          btn.addEventListener(
-            "click",
-            () => m?.done && (location.href = go("partido", `&id=${m.id}`)),
-          );
+          btn.onclick = () => m?.done && (location.href = go("partido", `&id=${m.id}`));
         }
         const counter = locateText(final, "CUENTA REGRESIVA");
         counter.forEach((e) => (e.textContent = "FECHA DE FINALIZACIÓN"));
@@ -314,7 +313,7 @@
         score.forEach((e) => (e.textContent = requestDate(t.end)));
         if (m?.done) {
           const target = $("h2", final)?.parentElement;
-          if (target) {
+          if (target && !target.querySelector(".arena-champion")) {
             const chip = document.createElement("p");
             chip.className = "arena-champion";
             chip.textContent = `🏆 CAMPEÓN: ${t.championName}`;
@@ -334,7 +333,7 @@
             : "Registrá tu equipo para participar en la siguiente edición. El administrador deberá aprobar tu inscripción.";
       const button = $("button", cta);
       if (button)
-        button.addEventListener("click", () => (location.href = go("equipos")));
+        button.onclick = () => (location.href = go("equipos"));
       const a = $("a", cta);
       if (a) a.href = d.user?.admin ? go("admin") : go("login");
     }
@@ -418,7 +417,7 @@
         : /cuartos/i.test(b.textContent)
           ? 2
           : 1;
-      b.addEventListener("click", () => {
+      b.onclick = () => {
         fill(n);
         buttons.forEach((el) => {
           el.classList.remove("bg-primary", "text-on-primary");
@@ -426,7 +425,7 @@
         });
         b.classList.add("bg-primary", "text-on-primary");
         b.classList.remove("bg-surface-container");
-      });
+      };
     });
     const h = sec.querySelector("h2");
     if (h) h.textContent = "ENFRENTAMIENTOS DESTACADOS";
@@ -553,6 +552,7 @@
         card.dataset.date = "Fecha no programada";
         card.dataset.stadium = "Ubicación no registrada";
         card.classList.toggle("arena-match-pending", !m.done);
+        card.classList.toggle("arena-match-in-play", !!m.live);
         const first = $$(".team-row", card);
         if (first.length >= 2) {
           [0, 1].forEach((side) => {
@@ -570,7 +570,7 @@
             );
             if (badge) badge.textContent = teamId ? short(name) : "·";
             const pill = $(".score-pill", row);
-            if (pill) pill.textContent = m.done ? String(score) : "—";
+            if (pill) pill.textContent = m.done || m.live ? String(score) : "—";
             row.classList.toggle(
               "arena-bracket-winner",
               !!m.done && m.winnerId === teamId,
@@ -586,7 +586,7 @@
           if (nameSpans[1]) nameSpans[1].textContent = m.bName || "Por definir";
           $$(".score-pill", card).forEach(
             (x, i) =>
-              (x.textContent = m.done ? String(i ? m.scoreB : m.scoreA) : "—"),
+              (x.textContent = m.done || m.live ? String(i ? m.scoreB : m.scoreA) : "—"),
           );
         }
         const header = $("div.flex.items-center.justify-between span", card);
@@ -597,11 +597,12 @@
           last.innerHTML = `<span class="text-secondary">${m.done ? "Clasificado: " + esc(card.dataset.winner) : "Camino a la final"}</span><span>${m.done ? "90\u2032" : "Por jugar"}</span>`;
         card.setAttribute("tabindex", "0");
         card.setAttribute("role", "button");
-        card.addEventListener("click", () => openMatchDrawer(m, card));
+        card.addEventListener("click", () => openMatchDrawer(
+          state.data?.matches.find((x) => x.id === m.id) || m, card));
         card.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            openMatchDrawer(m, card);
+            openMatchDrawer(state.data?.matches.find((x) => x.id === m.id) || m, card);
           }
         });
       }
@@ -1368,6 +1369,176 @@
       if (!confirm(msg)) e.preventDefault();
     });
   }
+  /**
+   * Panel visible para todos los visitantes mientras la copa se disputa.
+   * Usa únicamente goles/eventos hasta el minuto actual recibido del servidor.
+   */
+  function renderLivePanel(d) {
+    const main = $("main");
+    if (!main) return;
+    let panel = $("#arena-live-panel");
+    const live = d.live || {};
+    if (live.mode !== "LIVE" || live.phase === "FINISHED") {
+      panel?.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "arena-live-panel";
+      panel.className = "arena-live-panel";
+      panel.setAttribute("aria-label", "Marcador del torneo en vivo");
+      panel.setAttribute("aria-live", "polite");
+      main.insertBefore(panel, main.firstChild);
+    }
+    if (live.phase === "BREAK") {
+      const next = d.matches.find((m) => m.id === live.nextMatchId);
+      const last = [...d.matches].filter((m) => m.done).pop();
+      panel.innerHTML =
+        '<div class="arena-live-heading"><strong class="arena-live-indicator">DESCANSO ENTRE ENCUENTROS</strong><span>Próximo partido en ' +
+        esc(live.remainingSeconds) + ' segundos</span></div>' +
+        '<p>Último resultado: <strong>' +
+        esc(last ? (last.aName + " " + last.scoreA + " – " + last.scoreB + " " + last.bName) : "Por definir") +
+        '</strong></p><p>Siguiente: <strong>' +
+        esc(next ? (next.aName + " vs " + next.bName) : "Por definir") +
+        '</strong></p>';
+      return;
+    }
+    if (live.phase !== "PLAYING") return;
+    const match = d.matches.find((m) => m.id === live.matchId);
+    if (!match) return;
+    const first = live.first || {}, second = live.second || {};
+    const total = (key) => Number(first[key] || 0) + Number(second[key] || 0);
+    const possession = (Number(first.possessionA || 50) * Math.min(live.minute,45) +
+      Number(second.possessionA || 50) * Math.max(live.minute-45,0)) /
+      Math.max(1,live.minute);
+    const metric = (label, home, away) =>
+      '<div class="arena-live-metric"><small>' + esc(label) + '</small><strong>' +
+      esc(home) + ' – ' + esc(away) + '</strong></div>';
+    const events = (live.events || []).slice(-6).reverse().map((event) =>
+      '<span>' + esc(event.minute) + "' " + esc(event.type) + " · " +
+      esc(event.side === "A" ? match.aName : match.bName) + " · " +
+      esc(event.player) + '</span>').join("<br>");
+    panel.innerHTML =
+      '<div class="arena-live-heading"><strong class="arena-live-indicator">● PARTIDO EN VIVO · ' +
+      esc(["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][match.round]) +
+      ' ' + esc(match.position) + '</strong><span>Minuto ' + esc(live.minute) +
+      "' / 90 · " + esc(live.remainingSeconds) + ' s restantes</span></div>' +
+      '<div class="arena-live-score"><strong>' + esc(match.aName || "Por definir") +
+      '</strong><span class="arena-score-numbers">' + esc(live.scoreA) + ' : ' +
+      esc(live.scoreB) + '</span><strong>' + esc(match.bName || "Por definir") +
+      '</strong></div><div class="arena-live-metrics">' +
+      metric("Posesión (%)", Math.round(possession), 100 - Math.round(possession)) +
+      metric("Pases", total("passesA"), total("passesB")) +
+      metric("Tiros", total("shotsA"), total("shotsB")) +
+      metric("Tiros al arco", total("onA"), total("onB")) +
+      metric("Faltas", total("foulsA"), total("foulsB")) +
+      metric("Córners", total("cornersA"), total("cornersB")) +
+      '</div><div class="arena-live-events">' +
+      (events || 'Aún no hay goles ni sustituciones.') +
+      '</div><p class="mt-2"><a href="' + go("partido", "&id=" + match.id) +
+      '">Ver pantalla del partido</a> · Datos simulados</p>';
+  }
+
+  /**
+   * Actualiza nombres, goles y clasificados en la misma estructura de Stitch.
+   * No reinstala listeners de zoom ni filtros al llegar cada minuto.
+   */
+  function updateLiveBracket(d) {
+    for (const card of $("[data-real-match-id]", $("main"))) {
+      const match = d.matches.find((m) => m.id === Number(card.dataset.realMatchId));
+      if (!match) continue;
+      card.dataset.t1 = match.aName || "Por definir";
+      card.dataset.t2 = match.bName || "Por definir";
+      card.dataset.s1 = match.scoreA == null ? "—" : String(match.scoreA);
+      card.dataset.s2 = match.scoreB == null ? "—" : String(match.scoreB);
+      card.dataset.winner = match.done
+        ? (match.winnerId === match.aId ? match.aName : match.bName) : "Por definir";
+      card.classList.toggle("arena-match-in-play", !!match.live);
+      card.classList.toggle("arena-match-pending", !match.done);
+      const rows = $(".team-row", card);
+      if (rows.length >= 2) {
+        rows.slice(0, 2).forEach((row, side) => {
+          const name = side ? match.bName : match.aName;
+          const id = side ? match.bId : match.aId;
+          const score = side ? match.scoreB : match.scoreA;
+          const label = $("span.truncate", row)[0];
+          if (label) label.textContent = name || "Por definir";
+          const pill = $(".score-pill", row);
+          if (pill) pill.textContent = match.done || match.live ? String(score) : "—";
+          row.classList.toggle("arena-bracket-winner", match.done && match.winnerId === id);
+          row.classList.toggle("arena-bracket-loser", match.done && match.winnerId !== id);
+        });
+      } else {
+        const names = $("span.truncate", card);
+        if (names[0]) names[0].textContent = match.aName || "Por definir";
+        if (names[1]) names[1].textContent = match.bName || "Por definir";
+        $(".score-pill", card).forEach((e, side) => {
+          e.textContent = match.done || match.live
+            ? String(side ? match.scoreB : match.scoreA) : "—";
+        });
+      }
+      const status = $("div.flex.items-center.justify-between span", card);
+      if (status) {
+        const label = ["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][match.round];
+        status.textContent = label + " " + match.position + " · " +
+          (match.live ? "● EN VIVO" : match.done ? "FINALIZADO" :
+            match.ready ? "LISTO" : "PENDIENTE");
+      }
+    }
+  }
+
+  /** Consulta periódicamente y sincroniza a todos los espectadores sin recargar. */
+  function startLivePolling() {
+    if (!["home", "bracket", "admin", "match"].includes(page)) return;
+    async function poll() {
+      if (document.visibilityState === "hidden") {
+        window.setTimeout(poll, 5000);
+        return;
+      }
+      let interval = 4500;
+      try {
+        const response = await fetch(base + "/arena-data", {
+          credentials: "same-origin", headers: { Accept: "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("La consulta en vivo falló");
+        const d = await response.json();
+        if (!d.ok) throw new Error(d.error);
+        const old = state.data;
+        if ((old?.tournament?.id ?? null) !== (d.tournament?.id ?? null)) {
+          location.reload();
+          return;
+        }
+        state.data = d;
+        decorateNav(d);
+        if (page === "home" && d.finalized !== old?.finalized) drawHome(d);
+        if (page === "bracket") updateLiveBracket(d);
+        if (page === "match") {
+          const matchId = Number(new URLSearchParams(location.search).get("id"));
+          const previous = old?.matches?.find((m) => m.id === matchId);
+          const current = d.matches.find((m) => m.id === matchId);
+          if (previous?.live && current?.done) {
+            location.reload();
+            return;
+          }
+        }
+        renderLivePanel(d);
+        if (page === "admin" && d.finalized !== old?.finalized) {
+          // Los formularios administrativos cambian cuando avanzan ganadores.
+          // Recalcular el contenido solamente entre encuentros.
+          if (d.live?.phase !== "PLAYING") drawAdmin(d);
+        }
+        interval = d.live?.phase === "PLAYING" ? 1500
+          : d.live?.phase === "BREAK" ? 2500 : 5500;
+      } catch (error) {
+        console.warn("Sincronización en vivo:", error);
+        interval = 6500;
+      }
+      window.setTimeout(poll, interval);
+    }
+    window.setTimeout(poll, 1500);
+  }
+
   /** Consulta /arena-data y activa la página y sus animaciones. */
   async function initialize() {
     try {
@@ -1395,6 +1566,8 @@
       else if (page === "teams") drawTeams(data);
       else if (page === "auth") drawAuth(data);
       else if (page === "create") drawCreate(data);
+      renderLivePanel(data);
+      startLivePolling();
     } catch (e) {
       console.error("Error cargando las estadísticas de torneo:", e);
       bannerError(
