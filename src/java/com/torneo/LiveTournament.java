@@ -303,6 +303,17 @@ public final class LiveTournament {
         Map<String, Object> first = partialHalf(report.first, firstMinutes);
         Map<String, Object> second = partialHalf(report.second, secondMinutes);
 
+        // Si ya se anunció un gol, debe haber al menos un tiro al marco.
+        // Nunca presentar un gol con 0 tiros ni 0 remates a puerta.
+        int[] goalsByHalf = new int[4];
+        for (MatchSimulation.Event event : report.events) {
+            if (!"GOL".equals(event.type) || event.minute > minute) continue;
+            int halfIndex = event.minute <= 45 ? 0 : 2;
+            goalsByHalf[halfIndex + ("B".equals(event.side) ? 1 : 0)]++;
+        }
+        includeMinimumShots(first, goalsByHalf[0], goalsByHalf[1]);
+        includeMinimumShots(second, goalsByHalf[2], goalsByHalf[3]);
+
         int round, position;
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT round_no, match_no FROM matches WHERE id=?")) {
@@ -319,6 +330,15 @@ public final class LiveTournament {
                 "events", events, "first", first, "second", second,
                 "remainingSeconds", MATCH_SECONDS - elapsed,
                 "matchSeconds", MATCH_SECONDS, "breakSeconds", BREAK_SECONDS);
+    }
+
+    private static void includeMinimumShots(Map<String, Object> stats, int goalsA, int goalsB) {
+        int onA = Math.max(((Number) stats.get("onA")).intValue(), goalsA);
+        int onB = Math.max(((Number) stats.get("onB")).intValue(), goalsB);
+        stats.put("onA", onA);
+        stats.put("onB", onB);
+        stats.put("shotsA", Math.max(((Number) stats.get("shotsA")).intValue(), onA));
+        stats.put("shotsB", Math.max(((Number) stats.get("shotsB")).intValue(), onB));
     }
 
     private static Map<String, Object> partialHalf(MatchSimulation.Half half, int minutes) {
