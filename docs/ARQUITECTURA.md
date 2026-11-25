@@ -115,3 +115,27 @@ GitHub Actions levanta MySQL 8.4 y Tomcat 11 para ejecutar el flujo completo.
 - El HTML generado por Stitch se conserva fiel al diseño original:
   un embellecedor automático podría alterar el espaciado entre etiquetas.
 - Los archivos de `archive/legacy-ui` son referencia histórica, no páginas activas.
+
+## Herramientas de formato para futuros cambios
+
+En este PR se utilizaron herramientas de formato automático **sobre código propio**:
+
+- Google Java Format, modalidad `--aosp` (4 espacios), para `src/java/com/torneo/*.java` y `test/com/torneo/*.java`.
+- Prettier 3.6.2 para `web/js/stitch-runtime.js` y `web/css/stitch-bridge.css`.
+
+Si necesitás volver a formatear el JavaScript/CSS desde la raíz:
+
+```bash
+npx --yes prettier@3.6.2 --write web/js/stitch-runtime.js web/css/stitch-bridge.css
+```
+
+Para Java, descargá el `google-java-format-1.24.0-all-deps.jar` de la
+distribución oficial y ejecutá con **JDK 21**:
+
+```bash
+java -jar google-java-format-1.24.0-all-deps.jar --aosp --replace src/java/com/torneo/*.java test/com/torneo/*.java
+```
+
+No se agregaron dependencias a la ejecución de Tomcat. La carpeta de vistas
+`web/WEB-INF/views/arena/` mantiene la salida original de Stitch para
+evitar diferencias inesperadas de espaciado en el diseño.
