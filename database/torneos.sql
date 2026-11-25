@@ -1,5 +1,6 @@
 -- SISTEMA DE TORNEOS ELIMINATORIOS (MySQL 8+)
--- IMPORTANTE: este script reinicia SOLO la base "torneos".
+-- IMPORTANTE: este script NO reinicia ni elimina la base "torneos".
+-- Crea las tablas que no existan; no modifica columnas de tablas antiguas.
 CREATE DATABASE IF NOT EXISTS torneos CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 USE torneos;
 

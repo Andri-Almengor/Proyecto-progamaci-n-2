@@ -33,6 +33,35 @@ jobs:
           cache: maven
       - name: Initialize MySQL schema
         run: docker exec -i "${{ job.services.mysql.id }}" mysql -uroot -pci_password < database/torneos.sql
+      - name: Verify database installer and 20-team demo seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 database/generar_instalador.py --check
+          service="${{ job.services.mysql.id }}"
+          mysql_root() { docker exec -i "$service" mysql -uroot -pci_password "$@"; }
+          verify_seed() {
+            read -r total approved pending <<< "$(mysql_root -N -e "SELECT COUNT(*), SUM(status='APROBADO'), SUM(status='PENDIENTE') FROM torneos.teams")"
+            test "$total" = "20"
+            test "$approved" = "16"
+            test "$pending" = "4"
+          }
+          # Validar semilla independiente e idempotencia.
+          mysql_root < database/demo_20_equipos.sql >/dev/null
+          verify_seed
+          mysql_root < database/demo_20_equipos.sql >/dev/null
+          verify_seed
+          # El instalador único también debe funcionar sobre una base vacía.
+          mysql_root -e "DROP DATABASE torneos"
+          mysql_root < database/instalacion_completa_2026.sql >/dev/null
+          verify_seed
+          # Validar el SQL de creación del usuario restringido en CI.
+          mysql_root < database/usuario_aplicacion.sql >/dev/null
+          mysql_root -e "SHOW GRANTS FOR 'torneos_app'@'localhost'" >/dev/null
+          # La prueba JUnit de 16 equipos requiere esquema sin equipos previos.
+          mysql_root -e "DROP DATABASE torneos"
+          mysql_root < database/torneos.sql >/dev/null
+
       - name: Compile, test and package
         env:
           DB_URL: jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
