@@ -139,6 +139,31 @@ CREATE TABLE IF NOT EXISTS match_events (
  CONSTRAINT chk_event_minute CHECK (minute_no BETWEEN 1 AND 90)
 ) ENGINE=InnoDB;
 
+-- Plan de torneo en vivo (60 segundos por partido y 20 de descanso).
+CREATE TABLE IF NOT EXISTS tournament_live_runs (
+    tournament_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    status ENUM('RUNNING', 'FINISHED') NOT NULL DEFAULT 'RUNNING',
+    current_match_id BIGINT UNSIGNED NULL,
+    match_started_at DATETIME(3) NULL,
+    next_start_at DATETIME(3) NOT NULL,
+    planned_score_a SMALLINT UNSIGNED NULL,
+    planned_score_b SMALLINT UNSIGNED NULL,
+    rng_seed BIGINT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_live_tournament FOREIGN KEY (tournament_id)
+        REFERENCES tournaments(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_live_match FOREIGN KEY (current_match_id)
+        REFERENCES matches(id) ON DELETE RESTRICT,
+    CONSTRAINT chk_live_plan CHECK (
+        (current_match_id IS NULL AND match_started_at IS NULL
+            AND planned_score_a IS NULL AND planned_score_b IS NULL AND rng_seed IS NULL)
+        OR
+        (current_match_id IS NOT NULL AND match_started_at IS NOT NULL
+            AND planned_score_a IS NOT NULL AND planned_score_b IS NOT NULL
+            AND rng_seed IS NOT NULL AND planned_score_a <> planned_score_b)
+    )
+) ENGINE=InnoDB;
+
 -- BRACKET ARENA | 20 equipos de demostración, edición 2026
 -- Requisitos: MySQL 8+, database/schema/torneos.sql aplicado previamente.
 -- Ejecutar con una cuenta administradora de MySQL, NO con el usuario CRUD de la app.
