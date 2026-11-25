@@ -19,7 +19,7 @@ public final class Store {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** Serializa las aprobaciones, inscripciones y la creación del torneo. */
-    private static void lockCoordinator(Connection c) throws SQLException {
+    static void lockCoordinator(Connection c) throws SQLException {
         try (PreparedStatement p =
                         c.prepareStatement(
                                 "SELECT lock_id FROM system_lock WHERE lock_id=1 FOR UPDATE");
@@ -354,13 +354,23 @@ public final class Store {
 
     /** Inicia una copa con exactamente 16 equipos aprobados y genera sus 15 partidos. */
     public static void createTournament(
-            String name,
-            String image,
-            LocalDate start,
-            LocalDate end,
-            BigDecimal prize,
-            Set<Long> selected)
+            String name, String image, LocalDate start, LocalDate end,
+            BigDecimal prize, Set<Long> selected) throws SQLException, RuleException {
+        createTournament(name, image, start, end, prize, selected, "MANUAL");
+    }
+
+    /**
+     * MANUAL mantiene el comportamiento anterior; INSTANT crea las llaves
+     * y deja su resolución inmediata al controlador; LIVE programa los 15
+     * encuentros de manera transaccional, uno cada 60 + 20 segundos.
+     */
+    public static void createTournament(
+            String name, String image, LocalDate start, LocalDate end,
+            BigDecimal prize, Set<Long> selected, String simulationMode)
             throws SQLException, RuleException {
+        if (!Set.of("MANUAL", "INSTANT", "LIVE").contains(simulationMode)) {
+            throw new RuleException("Seleccioná un modo de simulación válido.");
+        }
         name = name == null ? "" : name.trim();
         image = Web.requiredImage(image);
         if (name.length() < 3 || name.length() > 140)
@@ -448,6 +458,11 @@ public final class Store {
                         }
                     }
                     p.executeBatch();
+                }
+                if ("LIVE".equals(simulationMode)) {
+                    // El plan queda guardado junto con el nuevo torneo: nadie
+                    // puede ver un cuadro sin su estado de reproducción.
+                    LiveTournament.schedule(c, tournamentId);
                 }
                 c.commit();
             } catch (SQLException | RuleException | RuntimeException e) {
@@ -537,6 +552,8 @@ public final class Store {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
             try {
+                lockCoordinator(c);
+                LiveTournament.assertNotRunning(c);
                 finishMatch(c, matchId, scoreA, scoreB, "MANUAL");
                 c.commit();
             } catch (SQLException | RuleException | RuntimeException ex) {
@@ -553,6 +570,8 @@ public final class Store {
             c.setAutoCommit(false);
             try {
                 int[] scores = randomScore();
+                lockCoordinator(c);
+                LiveTournament.assertNotRunning(c);
                 finishMatch(c, matchId, scores[0], scores[1], "AUTOMATICA");
                 c.commit();
             } catch (SQLException | RuleException | RuntimeException ex) {
@@ -569,6 +588,7 @@ public final class Store {
             c.setAutoCommit(false);
             try {
                 lockCoordinator(c);
+                LiveTournament.assertNotRunning(c);
                 int total = 0;
                 while (true) {
                     Long matchId = null;
@@ -608,9 +628,25 @@ public final class Store {
         return new int[] {a, b};
     }
 
+    /**
+     * Cierre de un encuentro en vivo mediante el informe determinista ya
+     * mostrado parcialmente a los visitantes. Nunca genera otro marcador.
+     */
+    static void finishMatchScheduled(
+            Connection c, long matchId, int scoreA, int scoreB,
+            MatchSimulation.Report report) throws SQLException, RuleException {
+        finishMatch(c, matchId, scoreA, scoreB, "AUTOMATICA", report);
+    }
+
     /** Único punto de escritura de resultados, ya sean manuales o simulados. */
     private static void finishMatch(Connection c, long matchId, int scoreA, int scoreB, String mode)
             throws SQLException, RuleException {
+        finishMatch(c, matchId, scoreA, scoreB, mode, null);
+    }
+
+    private static void finishMatch(
+            Connection c, long matchId, int scoreA, int scoreB, String mode,
+            MatchSimulation.Report preparedReport) throws SQLException, RuleException {
         if (scoreA < 0 || scoreB < 0 || scoreA > 999 || scoreB > 999)
             throw new RuleException("Los marcadores deben estar entre 0 y 999.");
         if (scoreA == scoreB)
@@ -667,7 +703,10 @@ public final class Store {
             if (p.executeUpdate() != 1) throw new RuleException("El resultado ya fue registrado.");
         }
         // La ficha del encuentro y su cronología se guardan atómicamente con el marcador.
-        MatchSimulation.save(c, matchId, MatchSimulation.generate(scoreA, scoreB, mode));
+        MatchSimulation.save(c, matchId,
+                preparedReport == null
+                        ? MatchSimulation.generate(scoreA, scoreB, mode)
+                        : preparedReport);
         if (round == 4) {
             try (PreparedStatement p =
                     c.prepareStatement(
