@@ -1,3 +1,9 @@
+<%--
+  BRACKET ARENA / PANTALLA: Formulario público para iniciar sesión.
+  Origen: HTML y clases originales de Stitch aportados al proyecto.
+  Los datos y permisos se actualizan mediante /arena-data y stitch-runtime.js.
+  La maquetación exportada se conserva sin reindentación para no cambiar su aspecto.
+--%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 
