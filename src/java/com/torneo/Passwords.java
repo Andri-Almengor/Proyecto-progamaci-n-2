@@ -3,15 +3,15 @@ package com.torneo;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
+
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 /**
  * Protege contraseñas usando PBKDF2-HMAC-SHA256 con sal aleatoria.
  *
- * <p>El formato guardado en MySQL es:
- * algoritmo$iteraciones$sal_base64$hash_base64.
- * No se guardan contraseñas en texto plano.
+ * <p>El formato guardado en MySQL es: algoritmo$iteraciones$sal_base64$hash_base64. No se guardan
+ * contraseñas en texto plano.
  */
 public final class Passwords {
 
@@ -27,16 +27,17 @@ public final class Passwords {
         byte[] salt = new byte[16];
         RNG.nextBytes(salt);
 
-        return "pbkdf2_sha256$" + ITERATIONS + "$"
-                + Base64.getEncoder().encodeToString(salt) + "$"
-                + Base64.getEncoder().encodeToString(
-                        derive(password, salt, ITERATIONS));
+        return "pbkdf2_sha256$"
+                + ITERATIONS
+                + "$"
+                + Base64.getEncoder().encodeToString(salt)
+                + "$"
+                + Base64.getEncoder().encodeToString(derive(password, salt, ITERATIONS));
     }
 
     /** Calcula la clave derivada de 256 bits y borra la copia temporal. */
     private static byte[] derive(String password, byte[] salt, int iterations) {
-        PBEKeySpec spec = new PBEKeySpec(
-                password.toCharArray(), salt, iterations, 256);
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, 256);
         try {
             return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
                     .generateSecret(spec)
@@ -49,8 +50,8 @@ public final class Passwords {
     }
 
     /**
-     * Compara el hash calculado con el guardado usando MessageDigest.isEqual,
-     * evitando una comparación de bytes con tiempo variable.
+     * Compara el hash calculado con el guardado usando MessageDigest.isEqual, evitando una
+     * comparación de bytes con tiempo variable.
      */
     public static boolean verify(String password, String encoded) {
         if (password == null || encoded == null) {
@@ -72,8 +73,7 @@ public final class Passwords {
             if (salt.length < 16 || expected.length != 32) {
                 return false;
             }
-            return MessageDigest.isEqual(
-                    expected, derive(password, salt, iterations));
+            return MessageDigest.isEqual(expected, derive(password, salt, iterations));
         } catch (RuntimeException ex) {
             return false;
         }

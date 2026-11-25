@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -17,21 +18,20 @@ import java.util.Set;
 /**
  * Controlador web principal de Bracket Arena.
  *
- * <p>GET presenta las páginas JSP y POST ejecuta operaciones de negocio.
- * Las validaciones del torneo se encuentran en {@link Store}; la autorización
- * y los tokens CSRF se verifican antes de modificar la base de datos.
+ * <p>GET presenta las páginas JSP y POST ejecuta operaciones de negocio. Las validaciones del
+ * torneo se encuentran en {@link Store}; la autorización y los tokens CSRF se verifican antes de
+ * modificar la base de datos.
  *
- * <p>Las vistas originales de Stitch están agrupadas en
- * {@code /WEB-INF/views/arena/}; no deben invocarse directamente por URL.
+ * <p>Las vistas originales de Stitch están agrupadas en {@code /WEB-INF/views/arena/}; no deben
+ * invocarse directamente por URL.
  */
 @WebServlet("/app")
 public final class AppServlet extends HttpServlet {
 
     private static final String VIEW_FOLDER = "/WEB-INF/views/arena/";
 
-    private static final Set<String> ALLOWED_VIEWS = Set.of(
-            "inicio", "cuadro", "equipos", "admin", "crear",
-            "login", "registro", "partido");
+    private static final Set<String> ALLOWED_VIEWS =
+            Set.of("inicio", "cuadro", "equipos", "admin", "crear", "login", "registro", "partido");
 
     /** Construye una URL relativa al contexto de Tomcat. */
     private String path(HttpServletRequest request, String view) {
@@ -46,8 +46,8 @@ public final class AppServlet extends HttpServlet {
     }
 
     /**
-     * Carga datos y selecciona la vista correspondiente.
-     * El partido y las estadísticas son públicos; la administración no.
+     * Carga datos y selecciona la vista correspondiente. El partido y las estadísticas son
+     * públicos; la administración no.
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -114,28 +114,30 @@ public final class AppServlet extends HttpServlet {
             } catch (SQLException ex) {
                 log("Error consultando el sistema de torneos", ex);
                 request.setAttribute("state", new Store.State());
-                request.setAttribute("dbError",
+                request.setAttribute(
+                        "dbError",
                         "No se pudo conectar con MySQL. Revisá database/schema/torneos.sql "
-                        + "y las variables DB_URL, DB_USER y DB_PASSWORD.");
+                                + "y las variables DB_URL, DB_USER y DB_PASSWORD.");
             }
         }
 
-        String template = switch (view) {
-            case "login" -> "login.jsp";
-            case "registro" -> "register.jsp";
-            case "equipos" -> "teams.jsp";
-            case "partido" -> "match.jsp";
-            case "cuadro" -> "bracket.jsp";
-            case "crear" -> "create.jsp";
-            case "admin" -> "admin.jsp";
-            default -> "home.jsp";
-        };
+        String template =
+                switch (view) {
+                    case "login" -> "login.jsp";
+                    case "registro" -> "register.jsp";
+                    case "equipos" -> "teams.jsp";
+                    case "partido" -> "match.jsp";
+                    case "cuadro" -> "bracket.jsp";
+                    case "crear" -> "create.jsp";
+                    case "admin" -> "admin.jsp";
+                    default -> "home.jsp";
+                };
         request.getRequestDispatcher(VIEW_FOLDER + template).forward(request, response);
     }
 
     /**
-     * Procesa acciones por POST: sesiones, equipos, torneo y resultados.
-     * Se utiliza patrón POST/Redirect/GET para evitar envíos duplicados.
+     * Procesa acciones por POST: sesiones, equipos, torneo y resultados. Se utiliza patrón
+     * POST/Redirect/GET para evitar envíos duplicados.
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -144,8 +146,8 @@ public final class AppServlet extends HttpServlet {
         response.setHeader("Cache-Control", "no-store");
 
         if (!Web.csrfValid(request)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN,
-                    "Formulario expirado. Actualizá la página.");
+            response.sendError(
+                    HttpServletResponse.SC_FORBIDDEN, "Formulario expirado. Actualizá la página.");
             return;
         }
 
@@ -162,8 +164,10 @@ public final class AppServlet extends HttpServlet {
                     target = "login";
                     String email = request.getParameter("email");
                     String password = request.getParameter("password");
-                    if (email == null || email.length() > 190
-                            || password == null || password.length() > 128) {
+                    if (email == null
+                            || email.length() > 190
+                            || password == null
+                            || password.length() > 128) {
                         throw new Store.RuleException("Revisá el correo y la contraseña.");
                     }
                     Store.User user = Store.login(email, password);
@@ -190,8 +194,7 @@ public final class AppServlet extends HttpServlet {
                             request.getParameter("email"),
                             request.getParameter("password"));
                     target = "login";
-                    flash(request, "ok",
-                            "Cuenta creada. Iniciá sesión para registrar tu equipo.");
+                    flash(request, "ok", "Cuenta creada. Iniciá sesión para registrar tu equipo.");
                 }
                 case "logout" -> {
                     HttpSession session = request.getSession(false);
@@ -202,11 +205,14 @@ public final class AppServlet extends HttpServlet {
                 case "team.create" -> {
                     requireUser(request);
                     target = "equipos";
-                    Store.addTeam(Web.user(request),
+                    Store.addTeam(
+                            Web.user(request),
                             request.getParameter("name"),
                             request.getParameter("phone"),
                             request.getParameter("shield"));
-                    flash(request, "ok",
+                    flash(
+                            request,
+                            "ok",
                             "¡Equipo inscrito! Está pendiente de aprobación del administrador.");
                 }
                 case "team.approve", "team.reject" -> {
@@ -238,31 +244,40 @@ public final class AppServlet extends HttpServlet {
                     if ("on".equals(request.getParameter("autoSimulate"))) {
                         Store.simulateRemaining();
                         target = "partido&id=" + Store.load().round(1).get(0).id + "&play=1";
-                        flash(request, "ok",
+                        flash(
+                                request,
+                                "ok",
                                 "¡Torneo simulado! Elegí reproducir cada partido, "
-                                + "saltarlo o ver directamente su resumen.");
+                                        + "saltarlo o ver directamente su resumen.");
                     } else {
                         target = "inicio";
-                        flash(request, "ok",
+                        flash(
+                                request,
+                                "ok",
                                 "¡Torneo creado! Podés simular partido a partido "
-                                + "o ingresar los marcadores.");
+                                        + "o ingresar los marcadores.");
                     }
                 }
                 case "tournament.simulateAll" -> {
                     requireAdmin(request);
                     int completed = Store.simulateRemaining();
-                    flash(request, "ok",
-                            "Se simularon " + completed
-                            + " partidos. ¡Todos los resúmenes quedaron guardados!");
+                    flash(
+                            request,
+                            "ok",
+                            "Se simularon "
+                                    + completed
+                                    + " partidos. ¡Todos los resúmenes quedaron guardados!");
                 }
                 case "match.simulate" -> {
                     requireAdmin(request);
                     long matchId = Long.parseLong(request.getParameter("matchId"));
                     Store.simulateMatch(matchId);
                     target = "partido&id=" + matchId + "&play=1";
-                    flash(request, "ok",
+                    flash(
+                            request,
+                            "ok",
                             "¡Partido simulado! Podés reproducirlo, "
-                            + "ver sus estadísticas o saltar la animación.");
+                                    + "ver sus estadísticas o saltar la animación.");
                 }
                 case "match.result" -> {
                     requireAdmin(request);
@@ -272,26 +287,28 @@ public final class AppServlet extends HttpServlet {
                             Integer.parseInt(request.getParameter("scoreA")),
                             Integer.parseInt(request.getParameter("scoreB")));
                     target = "partido&id=" + matchId + "&play=1";
-                    flash(request, "ok",
+                    flash(
+                            request,
+                            "ok",
                             "¡Resultado guardado! Revisá o saltá la simulación; "
-                            + "el ganador ya avanzó.");
+                                    + "el ganador ya avanzó.");
                 }
                 default -> {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST,
-                            "Acción desconocida");
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Acción desconocida");
                     return;
                 }
             }
         } catch (Store.RuleException ex) {
             flash(request, "error", ex.getMessage());
         } catch (NumberFormatException | DateTimeParseException ex) {
-            flash(request, "error",
-                    "Revisá los números, fechas y selecciones del formulario.");
+            flash(request, "error", "Revisá los números, fechas y selecciones del formulario.");
         } catch (SQLException ex) {
             log("Error SQL en " + action, ex);
-            flash(request, "error",
+            flash(
+                    request,
+                    "error",
                     "No se pudo guardar la operación. "
-                    + "Verificá los datos y la conexión MySQL.");
+                            + "Verificá los datos y la conexión MySQL.");
         }
         response.sendRedirect(path(request, target));
     }
@@ -299,8 +316,7 @@ public final class AppServlet extends HttpServlet {
     /** La inscripción requiere sesión, pero no el rol administrador. */
     private void requireUser(HttpServletRequest request) throws Store.RuleException {
         if (Web.user(request) == null) {
-            throw new Store.RuleException(
-                    "Iniciá sesión para realizar esta operación.");
+            throw new Store.RuleException("Iniciá sesión para realizar esta operación.");
         }
     }
 
@@ -308,8 +324,7 @@ public final class AppServlet extends HttpServlet {
     private void requireAdmin(HttpServletRequest request) throws Store.RuleException {
         Store.User user = Web.user(request);
         if (user == null || !user.admin()) {
-            throw new Store.RuleException(
-                    "Solo el administrador puede realizar esta operación.");
+            throw new Store.RuleException("Solo el administrador puede realizar esta operación.");
         }
     }
 }

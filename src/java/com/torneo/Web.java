@@ -2,13 +2,14 @@ package com.torneo;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
 import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Utilidades HTTP comunes: usuario autenticado, CSRF y validación de contenido.
- * Ninguna de estas comprobaciones debe depender únicamente de JavaScript.
+ * Utilidades HTTP comunes: usuario autenticado, CSRF y validación de contenido. Ninguna de estas
+ * comprobaciones debe depender únicamente de JavaScript.
  */
 public final class Web {
 
@@ -31,8 +32,8 @@ public final class Web {
     }
 
     /**
-     * Devuelve el token CSRF asociado a la sesión. Si aún no existe,
-     * lo crea con 32 bytes criptográficamente aleatorios.
+     * Devuelve el token CSRF asociado a la sesión. Si aún no existe, lo crea con 32 bytes
+     * criptográficamente aleatorios.
      */
     public static String token(HttpServletRequest request) {
         HttpSession session = request.getSession(true);
@@ -55,8 +56,8 @@ public final class Web {
     }
 
     /**
-     * Acepta solo URLs HTTP/HTTPS con host, sin credenciales embebidas.
-     * La imagen se carga desde una URL; no se almacena como BLOB.
+     * Acepta solo URLs HTTP/HTTPS con host, sin credenciales embebidas. La imagen se carga desde
+     * una URL; no se almacena como BLOB.
      */
     public static String image(String raw) {
         if (raw == null || raw.isBlank()) {
@@ -65,11 +66,12 @@ public final class Web {
         try {
             URI uri = URI.create(raw.trim());
             String scheme = uri.getScheme();
-            boolean http = "https".equalsIgnoreCase(scheme)
-                    || "http".equalsIgnoreCase(scheme);
+            boolean http = "https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme);
 
-            if (uri.getHost() == null || uri.getUserInfo() != null
-                    || !http || raw.length() > 1024) {
+            if (uri.getHost() == null
+                    || uri.getUserInfo() != null
+                    || !http
+                    || raw.length() > 1024) {
                 return "";
             }
             return raw.trim();
@@ -85,8 +87,7 @@ public final class Web {
         }
         String validUrl = image(raw);
         if (validUrl.isEmpty()) {
-            throw new Store.RuleException(
-                    "La imagen debe tener una URL http o https válida.");
+            throw new Store.RuleException("La imagen debe tener una URL http o https válida.");
         }
         return validUrl;
     }

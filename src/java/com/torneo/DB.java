@@ -7,9 +7,8 @@ import java.sql.SQLException;
 /**
  * Configuración de conexión JDBC con MySQL 8+.
  *
- * <p>Las credenciales se leen de variables de entorno para no guardar
- * contraseñas en el código ni en GitHub. En el README de database/
- * se explica cómo crear el usuario de la aplicación.
+ * <p>Las credenciales se leen de variables de entorno para no guardar contraseñas en el código ni
+ * en GitHub. En el README de database/ se explica cómo crear el usuario de la aplicación.
  */
 public final class DB {
 
@@ -24,8 +23,8 @@ public final class DB {
     }
 
     /**
-     * Abre una conexión nueva. El método que la llama debe cerrarla con
-     * try-with-resources para liberar recursos incluso si ocurre una excepción.
+     * Abre una conexión nueva. El método que la llama debe cerrarla con try-with-resources para
+     * liberar recursos incluso si ocurre una excepción.
      */
     public static Connection open() throws SQLException {
         try {
@@ -34,10 +33,12 @@ public final class DB {
             throw new SQLException("No se encontró el controlador JDBC MySQL.", ex);
         }
 
-        String url = env("DB_URL",
-                "jdbc:mysql://localhost:3306/torneos?useSSL=false"
-                + "&allowPublicKeyRetrieval=true&serverTimezone=UTC"
-                + "&characterEncoding=UTF-8");
+        String url =
+                env(
+                        "DB_URL",
+                        "jdbc:mysql://localhost:3306/torneos?useSSL=false"
+                                + "&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+                                + "&characterEncoding=UTF-8");
 
         String username = env("DB_USER", "root");
         String password = System.getenv().getOrDefault("DB_PASSWORD", "");
