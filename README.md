@@ -21,18 +21,19 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
 - MySQL 8 o superior
 - Controlador JDBC ya incluido en lib/
 
-## Instalación
+## Instalación de MySQL y datos de prueba
 
-1. Abrí MySQL Workbench o consola y ejecutá **database/torneos.sql**. El script es idempotente en la definición de tablas, pero NO borra registros existentes.
-2. Opcional: ejecutá **database/demo_16_equipos.sql** para cargar 16 equipos aprobados de práctica. Si querés probar inscripciones desde cero, **no lo ejecutes**.
-3. Configurá las variables de entorno del proceso Tomcat/NetBeans si no usás el MySQL local en puerto 3306:
-   - DB_URL: jdbc:mysql://localhost:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-   - DB_USER: root (valor local predeterminado; preferible usar usuario MySQL con permisos específicos)
-   - DB_PASSWORD: contraseña del MySQL local (valor predeterminado vacío)
-4. Abrí el directorio como proyecto en NetBeans, elegí Tomcat, y ejecutá **Clean and Build** / **Run**.
-5. Entrá a la URL desplegada, por ejemplo http://localhost:8080/BracketArena/app
+**Nuevo:** todas las instrucciones, scripts de creación de tablas, usuario MySQL, instalación completa con **20 equipos 2026** y comprobaciones están en **[database/README.md](database/README.md)**.
 
-**Administrador de prueba**: admin@torneo.local / AdminExamen2026! (solo uso académico; cambiá la contraseña antes de publicar). Los registros nuevos siempre son USUARIO; únicamente ADMIN administra aprobaciones, crea torneos y registra marcadores.
+**Para una instalación nueva**, abrí en MySQL Workbench el archivo **`database/instalacion_completa_2026.sql`** y ejecutá todas sus instrucciones. Crea la base `torneos`, las nueve tablas, el administrador web de demostración y **16 equipos aprobados + 4 pendientes**. No necesitás ejecutar `torneos.sql` ni `demo_20_equipos.sql` por separado si usaste el instalador completo.
+
+**Si ya tenés una base**, respaldala y ejecutá `database/demo_20_equipos.sql` para agregar solo equipos faltantes. Podés ejecutar `database/upgrade_match_simulations.sql` cuando tu esquema antiguo no tenga los informes deportivos. **No combinés** las semillas de 16 y de 20 equipos.
+
+**Usuario para conectarse desde Java:** ejecutá opcionalmente `database/usuario_aplicacion.sql` con un administrador de MySQL, reemplazando antes su contraseña de ejemplo; luego configurá `DB_URL`, `DB_USER`, `DB_PASSWORD` como variables de entorno del proceso NetBeans/Tomcat. No pongás tu contraseña real en el repositorio.
+
+**Cuenta web inicial:** `admin@torneo.local` / `AdminExamen2026!` (solo para desarrollo; cambiar antes de producción). Los registros nuevos obtienen el rol USUARIO.
+
+Abrí el directorio como proyecto en NetBeans, seleccioná Tomcat 10.1 u 11, ejecutá **Clean and Build** / **Run** y entrá a una URL como `http://localhost:8080/BracketArena/app`.
 
 ## Flujo para la demostración
 
@@ -53,7 +54,7 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
 - src/java/com/torneo/Web.java: sanitización de HTML/URLs y sesión.
 - web/WEB-INF/views/: vistas JSP (sin acceso directo por URL).
 - web/css/arena.css y web/js/arena.js: experiencia visual y validación del cliente.
-- database/torneos.sql: esquema con llaves primarias/foráneas, índices y restricciones.
+- database/torneos.sql: esquema con llaves primarias/foráneas, índices y restricciones. Ver también database/README.md para la carga de 20 equipos.
 
 Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayuda a la usabilidad. Se usa PreparedStatement contra inyección SQL y escape HTML en contenido proveniente de usuarios.
 
