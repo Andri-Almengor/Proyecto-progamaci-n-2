@@ -27,9 +27,9 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
 
 **Para una instalación nueva**, abrí en MySQL Workbench el archivo **`database/instalacion_completa_2026.sql`** y ejecutá todas sus instrucciones. Crea la base `torneos`, las nueve tablas, el administrador web de demostración y **16 equipos aprobados + 4 pendientes**. No necesitás ejecutar `torneos.sql` ni `demo_20_equipos.sql` por separado si usaste el instalador completo.
 
-**Si ya tenés una base**, respaldala y ejecutá `database/demo_20_equipos.sql` para agregar solo equipos faltantes. Podés ejecutar `database/upgrade_match_simulations.sql` cuando tu esquema antiguo no tenga los informes deportivos. **No combinés** las semillas de 16 y de 20 equipos.
+**Si ya tenés una base**, respaldala y ejecutá `database/seeds/demo_20_equipos.sql` para agregar solo equipos faltantes. Podés ejecutar `database/migrations/upgrade_match_simulations.sql` cuando tu esquema antiguo no tenga los informes deportivos. **No combinés** las semillas de 16 y de 20 equipos.
 
-**Usuario para conectarse desde Java:** ejecutá opcionalmente `database/usuario_aplicacion.sql` con un administrador de MySQL, reemplazando antes su contraseña de ejemplo; luego configurá `DB_URL`, `DB_USER`, `DB_PASSWORD` como variables de entorno del proceso NetBeans/Tomcat. No pongás tu contraseña real en el repositorio.
+**Usuario para conectarse desde Java:** ejecutá opcionalmente `database/setup/usuario_aplicacion.sql` con un administrador de MySQL, reemplazando antes su contraseña de ejemplo; luego configurá `DB_URL`, `DB_USER`, `DB_PASSWORD` como variables de entorno del proceso NetBeans/Tomcat. No pongás tu contraseña real en el repositorio.
 
 **Cuenta web inicial:** `admin@torneo.local` / `AdminExamen2026!` (solo para desarrollo; cambiar antes de producción). Los registros nuevos obtienen el rol USUARIO.
 
@@ -47,14 +47,16 @@ Abrí el directorio como proyecto en NetBeans, seleccioná Tomcat 10.1 u 11, eje
 
 ## Arquitectura
 
+Consulta [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) para el mapa de carpetas, rutas y responsabilidades de cada archivo. Las ocho páginas de Stitch están agrupadas en `web/WEB-INF/views/arena/`; la interfaz anterior se conserva en `archive/legacy-ui/`.
+
 - src/java/com/torneo/DB.java: conexión por variables de entorno.
 - src/java/com/torneo/Passwords.java: contraseñas PBKDF2-HMAC-SHA256 con salt aleatoria.
 - src/java/com/torneo/Store.java: consultas, objetos de datos y transacciones.
 - src/java/com/torneo/AppServlet.java: rutas GET/POST, autorización, protección CSRF y validación.
 - src/java/com/torneo/Web.java: sanitización de HTML/URLs y sesión.
-- web/WEB-INF/views/: vistas JSP (sin acceso directo por URL).
-- web/css/arena.css y web/js/arena.js: experiencia visual y validación del cliente.
-- database/torneos.sql: esquema con llaves primarias/foráneas, índices y restricciones. Ver también database/README.md para la carga de 20 equipos.
+- web/WEB-INF/views/arena/: vistas JSP activas (sin acceso directo por URL).
+- web/css/stitch.css, web/css/stitch-bridge.css y web/js/stitch-runtime.js: diseño Stitch, skeletons y render dinámico.
+- database/schema/torneos.sql: esquema con llaves primarias/foráneas, índices y restricciones. Ver también database/README.md para la carga de 20 equipos.
 
 Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayuda a la usabilidad. Se usa PreparedStatement contra inyección SQL y escape HTML en contenido proveniente de usuarios.
 
@@ -75,12 +77,12 @@ Las reglas cruciales se aplican en el servidor y en la base; JavaScript solo ayu
 - Al cerrar un partido se guardan dos tiempos, porcentajes de posesión, pases, tiros, tiros a puerta, ataques peligrosos (dominio ofensivo), córners, faltas, goles con minuto y cambios con minuto. El total calcula los sumatorios de ambos tiempos.
 - La ficha de cualquier partido finalizado permite **Reproducir**, **Pausar**, **Saltar animación**, elegir **Primer tiempo**, **Segundo tiempo** o **Partido completo**. El resumen es público, incluso para el rol USUARIO, sin permiso para editar.
 - **IMPORTANTE:** las estadísticas, los números de los jugadores, los minutos y los cambios son datos sintéticos ilustrativos. No se afirma que reflejen partidos reales; el simulador utiliza nombres genéricos «Jugador #N» porque no existen plantillas de futbolistas en la base.
-- En una base que ya ejecutó `database/torneos.sql` anteriormente, ejecutar **`database/upgrade_match_simulations.sql`** una vez antes de actualizar la aplicación. En instalaciones nuevas solo ejecutar `database/torneos.sql` actualizado. No se borran torneos anteriores; sus informes estadísticos se reconstruyen al abrirlos por primera vez y se identifican como tal.
+- En una base que ya ejecutó `database/schema/torneos.sql` anteriormente, ejecutar **`database/migrations/upgrade_match_simulations.sql`** una vez antes de actualizar la aplicación. En instalaciones nuevas solo ejecutar `database/schema/torneos.sql` actualizado. No se borran torneos anteriores; sus informes estadísticos se reconstruyen al abrirlos por primera vez y se identifican como tal.
 
 
 ## Diseño Stitch Tournament Monolith (edición 2026)
 
-Las ocho vistas Java/JSP usan directamente las cuatro pantallas HTML suministradas por Stitch: inicio, cuadro simétrico, panel administrativo y simulación de partidos. Las pantallas de equipos, ingreso, registro y creación adoptan el mismo sistema visual (Space Grotesk, Inter, blanco/negro y ámbar). Los archivos fuente están en `web/WEB-INF/views/stitch-*.jsp`, el CSS local compilado (no depende de Tailwind CDN) en `web/css/stitch.css`, el estilo de skeletons en `stitch-bridge.css`, y el cliente de datos en `web/js/stitch-runtime.js`.
+Las ocho vistas Java/JSP usan directamente las cuatro pantallas HTML suministradas por Stitch: inicio, cuadro simétrico, panel administrativo y simulación de partidos. Las pantallas de equipos, ingreso, registro y creación adoptan el mismo sistema visual (Space Grotesk, Inter, blanco/negro y ámbar). Los archivos fuente están en `web/WEB-INF/views/arena/*.jsp`, el CSS local compilado (no depende de Tailwind CDN) en `web/css/stitch.css`, el estilo de skeletons en `stitch-bridge.css`, y el cliente de datos en `web/js/stitch-runtime.js`.
 
 El endpoint público de solo lectura `GET /arena-data` obtiene del servidor la edición actual, equipos, 15 partidos, resultados, informes de simulación, goleadores y faltas. Ningún dato de ejemplo se utiliza para el torneo. La tabla de goleadores identifica números de jugadores simulados. Como no existe registro de tarjetas rojas o amarillas en el esquema, esos campos muestran "Sin registro" en vez de inventar sanciones.
 

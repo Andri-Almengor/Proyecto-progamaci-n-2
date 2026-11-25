@@ -1,5 +1,5 @@
 -- BRACKET ARENA | Usuario MySQL exclusivo para la aplicación
--- PASO 1: Ejecutar database/torneos.sql (o instalacion_completa_2026.sql).
+-- PASO 1: Ejecutar database/schema/torneos.sql (o instalacion_completa_2026.sql).
 -- PASO 2: REEMPLAZAR el texto CAMBIAR_ESTA_CONTRASENA_LARGA_Y_UNICA
 --         por una contraseña privada, distinta de la cuenta administrador web.
 -- PASO 3: Ejecutar este archivo CON UN ADMINISTRADOR DE MYSQL (root).

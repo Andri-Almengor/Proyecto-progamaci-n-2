@@ -1,7 +1,7 @@
 -- BRACKET ARENA | INSTALACION COMPLETA 2026 (MySQL 8+)
 -- Un solo archivo para MySQL Workbench: esquema + 20 equipos.
 -- No ejecuta DROP DATABASE ni borra registros existentes.
--- Usuario MySQL opcional: database/usuario_aplicacion.sql
+-- Usuario MySQL opcional: database/setup/usuario_aplicacion.sql
 
 -- SISTEMA DE TORNEOS ELIMINATORIOS (MySQL 8+)
 -- IMPORTANTE: este script NO reinicia ni elimina la base "torneos".
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS match_events (
 ) ENGINE=InnoDB;
 
 -- BRACKET ARENA | 20 equipos de demostración, edición 2026
--- Requisitos: MySQL 8+, database/torneos.sql aplicado previamente.
+-- Requisitos: MySQL 8+, database/schema/torneos.sql aplicado previamente.
 -- Ejecutar con una cuenta administradora de MySQL, NO con el usuario CRUD de la app.
 -- Es seguro repetirlo: NO borra equipos, NO modifica equipos existentes
 -- y NO inserta nada si hay un torneo ACTIVO.
