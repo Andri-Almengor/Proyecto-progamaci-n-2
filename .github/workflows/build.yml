@@ -114,7 +114,12 @@ jobs:
           test "$ready" = "1"
           echo 'STITCH TEST: homepage headline'
           grep -q 'LA GRAN FINAL NACIONAL' /tmp/bracket-home.html
-          grep -q 'Iniciar sesión' /tmp/bracket-home.html
+          # El atributo es estable aunque Tomcat normalice caracteres HTML.
+          if ! grep -q 'data-arena-login' /tmp/bracket-home.html; then
+            echo 'Encabezado de visitante no visible:'
+            head -c 3500 /tmp/bracket-home.html
+            exit 1
+          fi
           ! grep -q '/app?view=admin' /tmp/bracket-home.html
           ! grep -q 'SERVIDORES ONLINE' /tmp/bracket-home.html
           for page in equipos login registro cuadro; do
