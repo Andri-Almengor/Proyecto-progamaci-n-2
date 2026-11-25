@@ -109,3 +109,8 @@ Además del modo manual y el modo de resolución instantánea de los 15 partidos
 ### Encabezado según permisos
 
 La barra superior es compartida por todas las páginas. Los visitantes reciben exclusivamente el acceso **Iniciar sesión**; los miembros autenticados ven su nombre y **Salir**. Solo los administradores reciben el enlace **Administración**, comprobado desde JSP y el controlador Java. La pestaña activa tiene un fondo claro y no se muestran roles ficticios ni el mensaje «Datos actualizados».
+
+
+## Si aún aparece el encabezado viejo en NetBeans/Tomcat
+
+Si ves «VISITANTE», «SIN INICIAR SESIÓN», un avatar ficticio o «DATOS ACTUALIZADOS», tu navegador probablemente está viendo un despliegue anterior. Ejecutá en PowerShell `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue.ps1` y consultá **[docs/DESPLIEGUE_NETBEANS.md](docs/DESPLIEGUE_NETBEANS.md)**. El servidor actual debe devolver la cabecera `X-Bracket-Arena-UI: 2026-11-25-navbar-r2`. No es necesario reinstalar MySQL.
