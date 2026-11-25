@@ -793,7 +793,7 @@
   }
   /** Presenta controles de administración según el rol de usuario. */
   function drawAdmin(d) {
-    const sections = $$("main section");
+    const sections = $("main section").filter((element) => element.id !== "arena-live-panel");
     const panel = sections[0],
       batch = sections[1],
       management = sections[2],
