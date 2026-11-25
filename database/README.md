@@ -1,6 +1,6 @@
 # Base de datos de Bracket Arena (MySQL 8+)
 
-Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MySQL exclusiva, cargar **20 equipos de demostración 2026**, actualizar instalaciones existentes y verificar los resultados. El sistema utiliza **9 tablas** y conserva los partidos, resultados y estadísticas de cada torneo.
+Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MySQL exclusiva, cargar **20 equipos de demostración 2026**, actualizar instalaciones existentes y verificar los resultados. El sistema utiliza **10 tablas** y conserva los partidos, resultados y estadísticas de cada torneo.
 
 ## Estructura de carpetas
 
@@ -15,7 +15,7 @@ Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MyS
 
 | Archivo | Para qué sirve | ¿Modifica datos existentes? |
 |---|---|---|
-| `instalacion_completa_2026.sql` | **Instalación rápida**: crea base, 9 tablas, administrador web y 20 equipos | No borra; agrega solamente los que faltan |
+| `instalacion_completa_2026.sql` | **Instalación rápida**: crea base, 10 tablas, administrador web y 20 equipos | No borra; agrega solamente los que faltan |
 | `schema/torneos.sql` | Estructura completa + administrador de prueba | No borra; crea solo lo faltante |
 | `seeds/demo_20_equipos.sql` | Agrega 20 equipos sin duplicar; hasta 16 aprobados | Inserta nombres que faltan; no edita existentes |
 | `setup/usuario_aplicacion.sql` | Crea `torneos_app` con permisos mínimos de lectura/escritura | Crea/autoriza usuario MySQL; la contraseña es un placeholder |
@@ -29,7 +29,7 @@ Aquí está **todo lo necesario** para instalar el esquema, crear una cuenta MyS
 1. Abrí MySQL Workbench con una cuenta de MySQL que tenga permisos para crear bases de datos.
 2. Abrí **`database/instalacion_completa_2026.sql`** usando *File → Open SQL Script*.
 3. Presioná el rayo para ejecutar **todo el archivo**.
-4. Vas a tener la base `torneos`, sus nueve tablas, el administrador de demostración y los equipos de prueba.
+4. Vas a tener la base `torneos`, sus diez tablas, el administrador de demostración y los equipos de prueba.
 
 En una base realmente vacía el resultado es:
 

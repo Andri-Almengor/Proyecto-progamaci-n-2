@@ -25,7 +25,7 @@ Aplicación web **Java (JSP + Servlets + JDBC + MySQL)**, con panel administrati
 
 **Nuevo:** todas las instrucciones, scripts de creación de tablas, usuario MySQL, instalación completa con **20 equipos 2026** y comprobaciones están en **[database/README.md](database/README.md)**.
 
-**Para una instalación nueva**, abrí en MySQL Workbench el archivo **`database/instalacion_completa_2026.sql`** y ejecutá todas sus instrucciones. Crea la base `torneos`, las nueve tablas, el administrador web de demostración y **16 equipos aprobados + 4 pendientes**. No necesitás ejecutar `torneos.sql` ni `demo_20_equipos.sql` por separado si usaste el instalador completo.
+**Para una instalación nueva**, abrí en MySQL Workbench el archivo **`database/instalacion_completa_2026.sql`** y ejecutá todas sus instrucciones. Crea la base `torneos`, las diez tablas, el administrador web de demostración y **16 equipos aprobados + 4 pendientes**. No necesitás ejecutar `torneos.sql` ni `demo_20_equipos.sql` por separado si usaste el instalador completo.
 
 **Si ya tenés una base**, respaldala y ejecutá `database/seeds/demo_20_equipos.sql` para agregar solo equipos faltantes. Podés ejecutar `database/migrations/upgrade_match_simulations.sql` cuando tu esquema antiguo no tenga los informes deportivos. **No combinés** las semillas de 16 y de 20 equipos.
 
