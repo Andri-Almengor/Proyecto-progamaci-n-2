@@ -30,6 +30,9 @@ public final class AppServlet extends HttpServlet {
 
     private static final String VIEW_FOLDER = "/WEB-INF/views/arena/";
 
+    // Sirve para detectar si Tomcat está mostrando un WAR anterior.
+    private static final String UI_RELEASE = "2026-11-25-navbar-r2";
+
     private static final Set<String> ALLOWED_VIEWS =
             Set.of("inicio", "cuadro", "equipos", "admin", "crear", "login", "registro", "partido");
 
@@ -53,7 +56,12 @@ public final class AppServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-store");
+        // Nunca cachear el HTML autenticado. Los recursos estáticos se versionan
+        // con un parámetro ?v para evitar conservar estilos/scripts antiguos.
+        response.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0L);
+        response.setHeader("X-Bracket-Arena-UI", UI_RELEASE);
 
         String view = request.getParameter("view");
         if (view == null || view.isBlank()) {
