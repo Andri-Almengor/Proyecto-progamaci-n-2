@@ -79,6 +79,14 @@ jobs:
           mysql_root -e "DROP DATABASE torneos"
           mysql_root < database/schema/torneos.sql >/dev/null
 
+      - name: Check spectator privacy and frontend JavaScript syntax
+        shell: bash
+        run: |
+          node --check web/js/stitch-runtime.js
+          test -f web/WEB-INF/views/arena/partials/header.jspf
+          ! grep -R -q 'SERVIDORES ONLINE' web/WEB-INF/views/arena/
+          grep -q 'arena-nav-current' web/WEB-INF/views/arena/partials/header.jspf
+          grep -q 'arenaHeaderUser.admin()' web/WEB-INF/views/arena/partials/header.jspf
       - name: Compile, test and package
         env:
           DB_URL: jdbc:mysql://127.0.0.1:3306/torneos?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
@@ -106,6 +114,9 @@ jobs:
           test "$ready" = "1"
           echo 'STITCH TEST: homepage headline'
           grep -q 'LA GRAN FINAL NACIONAL' /tmp/bracket-home.html
+          grep -q 'Iniciar sesión' /tmp/bracket-home.html
+          ! grep -q '/app?view=admin' /tmp/bracket-home.html
+          ! grep -q 'SERVIDORES ONLINE' /tmp/bracket-home.html
           for page in equipos login registro cuadro; do
             curl -fsS "$base?view=$page" -o "/tmp/bracket-$page.html"
           done
@@ -125,6 +136,7 @@ jobs:
           curl -fsS -b /tmp/bracket-cookies "$base?view=admin" -o /tmp/bracket-admin.html
           echo 'STITCH TEST: admin panel'
           grep -q 'Gestor de Inscripciones y Solicitudes' /tmp/bracket-admin.html
+          grep -q '/app?view=admin' /tmp/bracket-admin.html
 
       - name: Smoke-test public match report with statistics
         run: |
