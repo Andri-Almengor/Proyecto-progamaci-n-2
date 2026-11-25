@@ -686,6 +686,9 @@
     const drawer = $("#match-drawer"),
       backdrop = $("#drawer-backdrop");
     if (!drawer) return;
+    drawer.dataset.currentMatchId = String(m.id);
+    const live = state.data?.live;
+    const inProgress = !!m.live && live?.phase === "PLAYING";
     const fields = {
       "#drawer-match-code": `PARTIDO ${m.position}`,
       "#drawer-stage-badge": [
@@ -697,9 +700,11 @@
       ][m.round],
       "#drawer-team-1": m.aName || "Por definir",
       "#drawer-team-2": m.bName || "Por definir",
-      "#drawer-score-1": m.done ? m.scoreA : "—",
-      "#drawer-score-2": m.done ? m.scoreB : "—",
-      "#drawer-winner": m.done ? card.dataset.winner : "Por definir",
+      "#drawer-score-1": m.done || inProgress ? m.scoreA : "—",
+      "#drawer-score-2": m.done || inProgress ? m.scoreB : "—",
+      "#drawer-winner": inProgress
+        ? "EN VIVO · MINUTO " + live.minute
+        : m.done ? card.dataset.winner : "Por definir",
       "#drawer-stadium": "Sede no registrada",
     };
     Object.entries(fields).forEach(([q, value]) => {
@@ -707,18 +712,24 @@
       if (e) e.textContent = String(value);
     });
     // El contenido de los eventos y comparativas del drawer proviene de los mismos datos persistidos.
-    const timeline = $$("span", drawer)
+    const timeline = $(".arena-drawer-timeline", drawer) || $("span", drawer)
       .find((e) => e.textContent.includes("14' GOL"))
       ?.closest(".space-y-2");
+    if (timeline) timeline.classList.add("arena-drawer-timeline");
+    const matchEvents = m.report?.events || (inProgress
+      ? (live.events || []).map((event) => ({
+          ...event, team: event.side === "A" ? m.aName : m.bName
+        }))
+      : []);
     if (timeline) {
-      timeline.innerHTML = m.report?.events?.length
-        ? m.report.events
+      timeline.innerHTML = matchEvents.length
+        ? matchEvents
             .map(
               (e) =>
                 `<div class="flex justify-between gap-2 border-b border-outline py-2 text-[11px]"><span class="text-secondary font-bold">${e.minute}' ${e.type}</span><span>${esc(e.player)} · ${esc(e.team)}</span></div>`,
             )
             .join("")
-        : `<p class="p-3 text-sm">${m.done ? "No hay eventos disponibles" : "Este encuentro todavía no ha iniciado."}</p>`;
+        : `<p class="p-3 text-sm">${inProgress ? "El partido está en juego. Los eventos aparecerán durante los próximos minutos." : m.done ? "No hay eventos disponibles" : "Este encuentro todavía no ha iniciado."}</p>`;
     }
     const numbers = $$("div.font-bold", drawer).filter(
       (e) =>
@@ -726,7 +737,14 @@
         e.textContent.includes("9 vs 3") ||
         e.textContent.includes("11 vs 14"),
     );
-    const stats = m.report?.total;
+    const stats = m.report?.total || (inProgress ? {
+      possessionA: live.first?.possessionA ?? 50,
+      possessionB: live.first?.possessionB ?? 50,
+      onA: (live.first?.onA || 0) + (live.second?.onA || 0),
+      onB: (live.first?.onB || 0) + (live.second?.onB || 0),
+      foulsA: (live.first?.foulsA || 0) + (live.second?.foulsA || 0),
+      foulsB: (live.first?.foulsB || 0) + (live.second?.foulsB || 0)
+    } : null);
     if (stats)
       numbers.forEach((el, i) => {
         const val =
@@ -1554,7 +1572,17 @@
             });
           }
         }
-        if (page === "bracket") updateLiveBracket(d);
+        if (page === "bracket") {
+          updateLiveBracket(d);
+          const drawer = $("#match-drawer");
+          if (drawer && !drawer.classList.contains("translate-x-full")) {
+            const current = d.matches.find(
+              (m) => m.id === Number(drawer.dataset.currentMatchId));
+            const card = current && $("[data-real-match-id]", $("main")).find(
+              (el) => Number(el.dataset.realMatchId) === current.id);
+            if (current && card) openMatchDrawer(current, card);
+          }
+        }
         if (page === "match") {
           const matchId = Number(new URLSearchParams(location.search).get("id"));
           const previous = old?.matches?.find((m) => m.id === matchId);
