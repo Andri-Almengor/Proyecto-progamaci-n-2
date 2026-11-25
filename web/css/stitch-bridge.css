@@ -1,3 +1,8 @@
+/* Estilos de integración: skeletons, aparición progresiva y estados dinámicos.
+ * stitch.css contiene la exportación compilada de Stitch y no se reescribe.
+ * No introducir cambios visuales aquí sin comprobar pantallas móvil y desktop.
+ */
+
 /* Complemento funcional del HTML/CSS original de Stitch Tournament Monolith.
  * No sustituye sus elementos ni redibuja la interfaz: adapta skeletons, estados vacíos,
  * formularios y datos persistidos a su misma paleta/jerarquía tipográfica. */

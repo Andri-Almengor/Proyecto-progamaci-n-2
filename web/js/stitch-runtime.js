@@ -16,10 +16,13 @@ const ink=(s)=>`<span class="font-title-sm text-title-sm font-bold text-on-surfa
 const state={data:null,filter:3};
 const section=i=>$(`[data-original-section="${i}"]`);
 const note=(text,title='LAS ESTADÍSTICAS ESTARÁN DISPONIBLES AL INICIAR EL TORNEO')=>`<div class="arena-empty-state"><div class="arena-empty-icon"><span class="material-symbols-outlined">analytics</span></div><strong>${esc(title)}</strong><p>${esc(text)}</p></div>`;
+/** Formatea fechas del servidor para la región de Costa Rica. */
 function requestDate(s){if(!s)return 'Fecha por definir';let [y,m,d]=s.split('-');return `${d}/${m}/${y}`;}
+/** Muestra un estado de error recuperable sin dejar una página vacía. */
 function bannerError(text){
   const main=$('main');if(main)main.innerHTML=`<div class="mx-auto max-w-3xl p-10">${note(text,'NO SE PUDIERON CARGAR LOS DATOS DEL TORNEO')}<a href="${go('inicio')}" class="arena-action">Reintentar</a></div>`;
 }
+/** Retira los skeletons y muestra las secciones en cascada. */
 function reveal(){
   document.body.classList.remove('arena-loading');document.body.classList.add('arena-ready');
   const all=$$('main > div > section, main section, main > div > div');
@@ -28,6 +31,7 @@ function reveal(){
   $('#arena-skeleton')?.setAttribute('aria-busy','false');
   window.setTimeout(()=>$('#arena-skeleton')?.remove(),650);
 }
+/** Actualiza enlaces y permisos visibles de la barra de navegación. */
 function decorateNav(d){
   const header=$('body > header');if(!header)return;
   $$('a',header).forEach(a=>{
@@ -82,14 +86,18 @@ function decorateNav(d){
     }
   }
 }
+/** Aplica el tema visual definido por la interfaz original. */
 function setTheme(mode,save=true){
   document.documentElement.classList.toggle('dark',mode==='dark');
   document.documentElement.classList.toggle('light',mode!=='dark');
   if(save)localStorage.setItem('arena-theme',mode);
 }
 function locateText(root,needle){return $$('span,p,small,strong,div',root).filter(e=>e.children.length===0&&e.textContent.toLowerCase().includes(needle.toLowerCase()));}
+/** Rellena el encabezado con la edición activa, año y premio reales. */
 function headline(label,numberText,description=''){return `<div class="arena-headline" aria-live="polite"><strong>${esc(label)}</strong><span>${esc(numberText)}</span><small>${esc(description)}</small></div>`;}
+/** Resume los goles y faltas de los reportes disponibles. */
 function totalStats(matches){return matches.filter(m=>m.done&&m.report);}
+/** Construye campos de inscripción con el token CSRF del servidor. */
 function teamForm(a,logo){return `<div class="arena-team-symbol">${esc(short(a))}</div>${ink(a)}`;}
 function finalTeamStats(teamId,d){
   if(!teamId)return null;
@@ -99,6 +107,7 @@ function finalTeamStats(teamId,d){
   for(const m of games){const a=m.aId===teamId;const h=m.report.total;possession+=a?h.possessionA:h.possessionB;on+=a?h.onA:h.onB;shots+=a?h.shotsA:h.shotsB;}
   return {possession:Math.round(possession/games.length),accuracy:shots?Math.round(100*on/shots):0,games:games.length};
 }
+/** Pinta inicio y las estadísticas globales del torneo. */
 function drawHome(d){
   const t=d.tournament;
   const meta=section(0),hero=section(1),kpis=section(2),final=section(3),feat=section(4),leaders=section(5),cta=section(6);
@@ -191,6 +200,7 @@ function drawHome(d){
     headers.slice(0,3).forEach((h,i)=>{h.textContent=replacements[i][0];const p=h.parentElement.parentElement.querySelector('p');if(p)p.textContent=replacements[i][1];});
   }
 }
+/** Lista enfrentamientos destacados según el avance real de las llaves. */
 function drawFeatured(d,sec){if(!sec)return;
   const grid=$('div.grid',sec);if(!grid)return;
   const rounds=[3,2,1,4];let selectedRound=rounds.find(r=>d.matches.some(m=>m.round===r&&m.done));
@@ -213,6 +223,7 @@ function drawFeatured(d,sec){if(!sec)return;
   });
   const h=sec.querySelector('h2');if(h)h.textContent='ENFRENTAMIENTOS DESTACADOS';
 }
+/** Genera la clasificación de goleadores desde los eventos almacenados. */
 function drawLeaders(d,sec){if(!sec)return;
   const cards=$$('div.grid > div',sec);const scorerBox=cards[0], disciplineBox=cards[1];
   if(scorerBox){
@@ -236,6 +247,7 @@ function drawLeaders(d,sec){if(!sec)return;
     const bottom=locateText(disciplineBox,'0 SANCIONES PENDIENTES');bottom.forEach(el=>el.textContent='SIN SISTEMA DE SANCIONES');
   }
 }
+/** Dibuja las 15 posiciones y resultados del cuadro eliminatorio. */
 function drawBracket(d){
   const main=$('main'),stage=$('#bracket-stage'),viewport=$('#bracket-viewport');
   const title=$$('h1,h2',main).find(e=>/copa|gran|cuadro/i.test(e.textContent));
@@ -308,6 +320,7 @@ function drawBracket(d){
   $('#close-drawer')?.addEventListener('click',closeDrawer);$('#drawer-backdrop')?.addEventListener('click',closeDrawer);
 }
 function closeDrawer(){$('#match-drawer')?.classList.add('translate-x-full');$('#drawer-backdrop')?.classList.add('hidden');}
+/** Muestra el detalle del partido seleccionado desde datos persistidos. */
 function openMatchDrawer(m,card){
   const drawer=$('#match-drawer'),backdrop=$('#drawer-backdrop');if(!drawer)return;
   const fields={'#drawer-match-code':`PARTIDO ${m.position}`,'#drawer-stage-badge':['','OCTAVOS DE FINAL','CUARTOS DE FINAL','SEMIFINAL','GRAN FINAL'][m.round],
@@ -328,6 +341,7 @@ function openMatchDrawer(m,card){
   if(details){details.disabled=!m.done;details.innerHTML='<span class="material-symbols-outlined text-[16px]">query_stats</span> Ver estadísticas completas';details.onclick=()=>location.href=go('partido',`&id=${m.id}`);}
   drawer.classList.remove('translate-x-full');backdrop?.classList.remove('hidden');
 }
+/** Exporta una representación del cuadro visible. */
 function exportBracket(d){
   const matches=d.matches;if(!matches.length)return;
   const escSvg=s=>String(s||'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[x]));
@@ -341,6 +355,7 @@ function exportBracket(d){
   const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='bracket-arena-2026.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+/** Presenta controles de administración según el rol de usuario. */
 function drawAdmin(d){
   const sections=$$('main section');const panel=sections[0],batch=sections[1],management=sections[2],registry=sections[3];
   const active=d.tournament?.status==='ACTIVO';
@@ -430,11 +445,13 @@ function drawAdmin(d){
     }
   }
 }
+/** Envía operaciones al servlet usando POST y el token CSRF. */
 function submit(action,values,csrf){
   const f=document.createElement('form');f.method='POST';f.action=base+'/app';
   Object.entries({action,csrf,...values}).forEach(([name,value])=>{const input=document.createElement('input');input.type='hidden';input.name=name;input.value=String(value);f.appendChild(input);});
   document.body.appendChild(f);f.submit();
 }
+/** Renderiza tiempos, eventos y estadísticas del partido. */
 function drawMatch(d){
   const qs=new URLSearchParams(location.search),id=Number(qs.get('id'));
   const m=d.matches.find(x=>x.id===id);
@@ -537,6 +554,7 @@ function drawMatch(d){
   if(new URLSearchParams(location.search).get('play')==='1'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){play(true);}
   window.addEventListener('pagehide',pause);
 }
+/** Actualiza catálogo y estado de aprobación de los equipos. */
 function drawTeams(d){
   const list=$('#arena-teams-list');if(list){
     const teams=d.teams;
@@ -548,10 +566,12 @@ function drawTeams(d){
     else{form.action=base+'/app';form.elements.csrf.value=d.csrf;}
   }
 }
+/** Activa los formularios de acceso y registro. */
 function drawAuth(d){
   const form=$('#arena-auth-form');if(form){form.action=base+'/app';form.elements.csrf.value=d.csrf;}
   if(d.user){const main=$('main');main.innerHTML=note('Ya tenés una sesión activa.','SESIÓN INICIADA')+`<a class="arena-action" href="${go('inicio')}">Regresar al inicio</a>`;}
 }
+/** Construye la pantalla de creación de torneo. */
 function drawCreate(d){
   const form=$('#arena-create-form'),selection=$('#arena-create-team-list');
   if(!form)return;
@@ -567,6 +587,7 @@ function drawCreate(d){
     if(!confirm(msg))e.preventDefault();
   });
 }
+/** Consulta /arena-data y activa la página y sus animaciones. */
 async function initialize(){
   try{
     const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),16000);

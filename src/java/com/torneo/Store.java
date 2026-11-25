@@ -6,7 +6,13 @@ import java.time.LocalDate;
 import java.util.*;
 import java.security.SecureRandom;
 
-/** Acceso a datos y reglas transaccionales de un torneo de eliminación directa. */
+/**
+ * Repositorio de datos y reglas transaccionales del torneo eliminatorio.
+ *
+ * <p>El acceso a MySQL se realiza con PreparedStatement y try-with-resources.
+ * Las operaciones que asignan cupos o actualizan partidos usan transacciones
+ * para evitar resultados incompletos o aprobaciones simultáneas.
+ */
 public final class Store {
     private Store() {}
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -20,6 +26,7 @@ public final class Store {
     public static final class RuleException extends Exception {
         public RuleException(String message) { super(message); }
     }
+    /** Usuario autenticado: los permisos dependen del rol ADMIN o USUARIO. */
     public static final class User implements java.io.Serializable {
         private static final long serialVersionUID = 1L;
         public final long id;
@@ -27,8 +34,11 @@ public final class Store {
         User(long id, String name, String email, String role) {
             this.id = id; this.name = name; this.email = email; this.role = role;
         }
-        public boolean admin() { return "ADMIN".equals(role); }
+        public boolean admin() {
+            return "ADMIN".equals(role);
+        }
     }
+    /** Equipo inscrito con su estado de aprobación y propietario. */
     public static final class Team {
         public final long id, ownerId;
         public final String name, shield, phone, owner, status;
@@ -39,6 +49,7 @@ public final class Store {
             status = r.getString("status");
         }
     }
+    /** Datos visibles del torneo actual o de la edición más reciente. */
     public static final class Tournament {
         public final long id;
         public final String name, image, status, championName, championShield;
@@ -57,6 +68,7 @@ public final class Store {
             championShield = r.getString("champion_shield");
         }
     }
+    /** Encuentro del cuadro: ocho octavos, cuatro cuartos, dos semis y final. */
     public static final class Match {
         public final long id, tournamentId;
         public final int round, position;
@@ -74,14 +86,19 @@ public final class Store {
             scoreA = nullableInt(r, "score_a"); scoreB = nullableInt(r, "score_b");
             status = r.getString("status");
         }
-        public boolean done() { return "FINALIZADO".equals(status); }
+        public boolean done() {
+            return "FINALIZADO".equals(status);
+        }
     }
     private static Long nullableLong(ResultSet rs, String col) throws SQLException {
-        long val = rs.getLong(col); return rs.wasNull() ? null : val;
+        long value = rs.getLong(col);
+        return rs.wasNull() ? null : value;
     }
     private static Integer nullableInt(ResultSet rs, String col) throws SQLException {
-        int val = rs.getInt(col); return rs.wasNull() ? null : val;
+        int value = rs.getInt(col);
+        return rs.wasNull() ? null : value;
     }
+    /** Estado para renderizar la pantalla sin que cada JSP consulte MySQL. */
     public static final class State {
         public Tournament tournament;
         public final List<Team> teams = new ArrayList<>();
@@ -99,6 +116,7 @@ public final class Store {
             return list;
         }
     }
+    /** Autentica a un usuario activo validando su hash PBKDF2; nunca se compara texto plano. */
     public static User login(String email, String password) throws SQLException {
         String sql = "SELECT id, full_name, email, role, password_hash FROM users WHERE email = ? AND active = 1";
         try (Connection c = DB.open(); PreparedStatement p = c.prepareStatement(sql)) {
@@ -111,6 +129,7 @@ public final class Store {
         }
         return null;
     }
+    /** Registra una cuenta normal y aplica validaciones antes de guardar el hash. */
     public static void register(String name, String email, String password) throws SQLException, RuleException {
         name = name == null ? "" : name.trim().replaceAll("\\s+", " ");
         email = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
@@ -126,6 +145,7 @@ public final class Store {
             catch (SQLIntegrityConstraintViolationException ex) { throw new RuleException("Ese correo ya tiene una cuenta registrada."); }
         }
     }
+    /** Consulta la edición más reciente y reúne equipos, llaves y estado del torneo. */
     public static State load() throws SQLException {
         State s = new State();
         try (Connection c = DB.open()) {
@@ -168,6 +188,7 @@ public final class Store {
         }
         return s;
     }
+    /** Inscribe un equipo pendiente. El candado impide cambios durante un torneo activo. */
     public static void addTeam(User owner, String name, String phone, String shield) throws SQLException, RuleException {
         if (owner == null) throw new RuleException("Iniciá sesión para inscribir un equipo.");
         name = name == null ? "" : name.trim().replaceAll("\\s+", " ");
@@ -193,6 +214,7 @@ public final class Store {
             } catch (SQLException | RuleException e) { c.rollback(); throw e; }
         }
     }
+    /** Aprueba o rechaza con control transaccional del máximo de 16 aprobados. */
     public static void setApproval(long teamId, boolean approve) throws SQLException, RuleException {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
@@ -223,6 +245,7 @@ public final class Store {
             } catch (SQLException | RuleException e) { c.rollback(); throw e; }
         }
     }
+    /** Inicia una copa con exactamente 16 equipos aprobados y genera sus 15 partidos. */
     public static void createTournament(String name, String image, LocalDate start, LocalDate end,
                                         BigDecimal prize, Set<Long> selected) throws SQLException, RuleException {
         name = name == null ? "" : name.trim();
@@ -277,6 +300,7 @@ public final class Store {
         }
     }
     /** Orden natural de los 15 encuentros; sirve para navegar la simulación sin obligar a verla. */
+    /** Busca el siguiente partido en el orden natural de las cuatro rondas. */
     public static Long nextMatchId(Match match) throws SQLException {
         try (Connection c = DB.open();
              PreparedStatement p = c.prepareStatement(
@@ -300,6 +324,7 @@ public final class Store {
     }
 
     /** Reportes públicos: disponibles para jugadores, visitantes y administradores. */
+    /** Recupera un partido y su ficha; puede reconstruir reportes históricos. */
     public static MatchDetail loadMatchDetail(long matchId) throws SQLException {
         if (matchId <= 0) return null;
         try (Connection c = DB.open()) {
@@ -334,6 +359,7 @@ public final class Store {
         }
     }
 
+    /** Registra el marcador manual de manera atómica con el avance del ganador. */
     public static void recordScore(long matchId, int scoreA, int scoreB) throws SQLException, RuleException {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
@@ -347,6 +373,7 @@ public final class Store {
     }
 
     /** El administrador simula un encuentro individual y registra su resultado automáticamente. */
+    /** Genera un resultado ilustrativo para un único partido habilitado. */
     public static void simulateMatch(long matchId) throws SQLException, RuleException {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
@@ -361,6 +388,7 @@ public final class Store {
     }
 
     /** Simula todos los encuentros restantes en orden y en una sola transacción. */
+    /** Simula en orden todos los partidos pendientes y devuelve cuántos finalizó. */
     public static int simulateRemaining() throws SQLException, RuleException {
         try (Connection c = DB.open()) {
             c.setAutoCommit(false);
@@ -393,6 +421,7 @@ public final class Store {
         }
     }
 
+    /** Produce un marcador sin empate porque el formato es eliminación directa. */
     private static int[] randomScore() {
         int a = RANDOM.nextInt(5), b = RANDOM.nextInt(5);
         if (a == b) b = (b + 1) % 5;

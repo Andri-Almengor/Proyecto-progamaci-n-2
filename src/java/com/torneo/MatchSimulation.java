@@ -9,13 +9,18 @@ import java.util.concurrent.ThreadLocalRandom;
  * Se guarda junto con el resultado para que cualquier usuario pueda verla otra vez.
  */
 public final class MatchSimulation {
-    private MatchSimulation() {}
+
+    private MatchSimulation() {
+        // Solo contiene lógica de generación, persistencia y lectura.
+    }
+    /** Métricas de uno de los dos tiempos (o el total calculado). */
     public static final class Half {
         public int number, possessionA, passesA, passesB, shotsA, shotsB, onA, onB,
                 dangerousA, dangerousB, cornersA, cornersB, foulsA, foulsB;
         public int goalsA, goalsB;
         public Half(int number) { this.number = number; }
     }
+    /** Evento ilustrativo de gol o sustitución, con minuto y lado del campo. */
     public static final class Event {
         public final int minute;
         public final String type, side, player, outgoing;
@@ -24,6 +29,7 @@ public final class MatchSimulation {
             this.player = player; this.outgoing = outgoing;
         }
     }
+    /** Informe persistido: ambos tiempos, eventos ordenados y origen del dato. */
     public static final class Report {
         public final Half first, second;
         public final List<Event> events;
@@ -45,9 +51,11 @@ public final class MatchSimulation {
             return t;
         }
     }
+    /** Número aleatorio inclusivo dentro del intervalo solicitado. */
     private static int between(Random random, int min, int max) {
         return min + random.nextInt(max - min + 1);
     }
+    /** Crea una nueva narración estadística a partir del marcador final. */
     public static Report generate(int scoreA, int scoreB, String mode) {
         return generate(scoreA, scoreB, mode, new Random(ThreadLocalRandom.current().nextLong()));
     }
@@ -83,6 +91,7 @@ public final class MatchSimulation {
         ensureShots(second);
         return new Report(first, second, events, mode);
     }
+    /** Distribuye métricas plausibles en un tiempo de 45 minutos. */
     private static void stats(Half half, Random rng) {
         half.possessionA = between(rng, 34, 66);
         half.passesA = 75 + half.possessionA * 4 + between(rng, -25, 25);
@@ -93,12 +102,14 @@ public final class MatchSimulation {
         half.cornersA = between(rng, 0, 6); half.cornersB = between(rng, 0, 6);
         half.foulsA = between(rng, 3, 10); half.foulsB = between(rng, 3, 10);
     }
+    /** Garantiza que tiros a puerta no sean menores que goles ni mayores que tiros. */
     private static void ensureShots(Half half) {
         half.onA = Math.max(half.onA, half.goalsA);
         half.onB = Math.max(half.onB, half.goalsB);
         half.shotsA = Math.max(half.shotsA, half.onA);
         half.shotsB = Math.max(half.shotsB, half.onB);
     }
+    /** Inserta los dos tiempos y los eventos en la transacción recibida. */
     public static void save(Connection c, long matchId, Report report) throws SQLException {
         try (PreparedStatement p = c.prepareStatement("INSERT INTO match_simulations(match_id,mode) VALUES (?,?)")) {
             p.setLong(1,matchId); p.setString(2, report.mode); p.executeUpdate();
@@ -129,6 +140,7 @@ public final class MatchSimulation {
             p.executeBatch();
         }
     }
+    /** Reconstruye un informe ya guardado a partir de sus tablas SQL. */
     public static Report read(Connection c, long matchId) throws SQLException {
         String mode;
         try (PreparedStatement p = c.prepareStatement("SELECT mode FROM match_simulations WHERE match_id=?")) {
