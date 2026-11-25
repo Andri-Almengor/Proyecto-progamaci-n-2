@@ -1,0 +1,64 @@
+<%--
+  Barra de navegación compartida por las ocho páginas.
+  Los enlaces administrativos se renderizan SOLO cuando el servidor valida ADMIN.
+  No hay selector de roles: el rol depende de la sesión real.
+--%>
+<%
+  com.torneo.Store.User arenaHeaderUser = com.torneo.Web.user(request);
+  String arenaHeaderView = (String) request.getAttribute("view");
+  if (arenaHeaderView == null) arenaHeaderView = "inicio";
+%>
+<header class="arena-ui-header fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+  <div class="arena-header-top">
+    <a class="arena-brand flex items-center gap-space-sm group" href="<%=request.getContextPath()%>/app?view=inicio">
+      <span class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+        <span class="material-symbols-outlined text-secondary text-[22px]">emoji_events</span>
+      </span>
+      <span class="flex flex-col">
+        <span class="font-headline-md text-headline-md tracking-tight uppercase text-primary leading-none">BRACKET<span class="text-secondary">ARENA</span></span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Tournament Engine</span>
+      </span>
+    </a>
+
+    <nav class="arena-navbar" aria-label="Navegación principal">
+      <a data-path="inicio" class="arena-nav-link <%= "inicio".equals(arenaHeaderView) ? "arena-nav-current" : "" %>" href="<%=request.getContextPath()%>/app?view=inicio" <%= "inicio".equals(arenaHeaderView) ? "aria-current=\"page\"" : "" %>>Inicio</a>
+      <a data-path="cuadro" class="arena-nav-link <%= "cuadro".equals(arenaHeaderView) ? "arena-nav-current" : "" %>" href="<%=request.getContextPath()%>/app?view=cuadro" <%= "cuadro".equals(arenaHeaderView) ? "aria-current=\"page\"" : "" %>>Cuadro</a>
+      <a data-path="equipos" class="arena-nav-link <%= "equipos".equals(arenaHeaderView) ? "arena-nav-current" : "" %>" href="<%=request.getContextPath()%>/app?view=equipos" <%= "equipos".equals(arenaHeaderView) ? "aria-current=\"page\"" : "" %>>Equipos</a>
+      <% if (arenaHeaderUser != null && arenaHeaderUser.admin()) { %>
+      <a data-path="admin" class="arena-nav-link <%= ("admin".equals(arenaHeaderView) || "crear".equals(arenaHeaderView)) ? "arena-nav-current" : "" %>" href="<%=request.getContextPath()%>/app?view=admin" <%= ("admin".equals(arenaHeaderView) || "crear".equals(arenaHeaderView)) ? "aria-current=\"page\"" : "" %>>Administración</a>
+      <% } %>
+    </nav>
+
+    <div class="arena-header-actions">
+      <div class="arena-theme-controls hidden sm:flex items-center bg-surface-container p-0.5 rounded-lg">
+        <button class="arena-theme-button" title="Tema Claro (Tournament Monolith)" type="button" data-arena-theme="light">
+          <span class="material-symbols-outlined text-[18px]">light_mode</span>
+        </button>
+        <button class="arena-theme-button" title="Tema Oscuro (Obsidian Apex)" type="button" data-arena-theme="dark">
+          <span class="material-symbols-outlined text-[18px]">dark_mode</span>
+        </button>
+      </div>
+      <% if (arenaHeaderUser == null) { %>
+        <a class="arena-login-button" data-arena-login href="<%=request.getContextPath()%>/app?view=login">
+          <span class="material-symbols-outlined text-[18px]">login</span> Iniciar sesión
+        </a>
+      <% } else { %>
+        <span class="arena-logged-user" title="Sesión iniciada"><%=com.torneo.Web.esc(arenaHeaderUser.name)%></span>
+        <form method="post" action="<%=request.getContextPath()%>/app" data-arena-logout class="arena-session-exit">
+          <input type="hidden" name="csrf" value="<%=com.torneo.Web.esc((String)request.getAttribute("csrf"))%>"/>
+          <input type="hidden" name="action" value="logout"/>
+          <button class="arena-login-button" type="submit">
+            <span class="material-symbols-outlined text-[18px]">logout</span> Salir
+          </button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="arena-header-ticker w-full bg-tertiary-container py-1.5 px-margin flex items-center gap-space-md overflow-hidden">
+    <span class="arena-ticker-badge px-2 py-0.5 rounded bg-secondary text-on-secondary font-label-sm text-label-sm uppercase tracking-widest shrink-0" id="arena-ticker-status">TORNEO 2026</span>
+    <span class="font-label-md text-label-md text-on-tertiary uppercase tracking-wider truncate" id="arena-ticker-text">
+      La información y las estadísticas se mostrarán cuando inicie el torneo.
+    </span>
+  </div>
+</header>
