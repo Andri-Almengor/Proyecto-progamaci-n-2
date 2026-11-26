@@ -1503,7 +1503,7 @@
           const name = side ? match.bName : match.aName;
           const id = side ? match.bId : match.aId;
           const score = side ? match.scoreB : match.scoreA;
-          const label = $("span.truncate", row)[0];
+          const label = $("span.truncate", row);
           if (label) label.textContent = name || "Por definir";
           const pill = $(".score-pill", row);
           if (pill) pill.textContent = match.done || match.live ? String(score) : "—";
