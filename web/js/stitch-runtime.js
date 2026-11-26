@@ -1456,7 +1456,7 @@
             '<span class="material-symbols-outlined text-[11px]">' +
             (goal ? "sports_soccer" : "sync") + '</span></button>';
         }).join("");
-      $(".arena-replay-marker", markers).forEach((button) =>
+      $$(".arena-replay-marker", markers).forEach((button) =>
         button.addEventListener("click", () => {
           pause();
           minute = Math.max(0, Math.min(90, Number(button.dataset.minute)));
@@ -1464,90 +1464,144 @@
         })
       );
     }
-    // Progresión estrictamente visual de 0 a 90, nunca altera la BD.
-    let minute = 90,
-      timer = null,
-      speed = 1;
-    const clock = $("#clock-display"),
-      period = $("#clock-period"),
-      progress = $("#sim-progress-bar"),
-      ball = $("#ball-actor");
+    // La reproducción es únicamente visual. Cada minuto virtual = 450ms a 1x.
+    // Interpolación por requestAnimationFrame entre minutos, sin modificar la BD.
+    let minute = 90;
+    let timer = null;
+    let speed = 1;
+    let frameHandle = null;
+    let frameStart = null;
+    const reducedMotion = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const clock = $("#clock-display");
+    const period = $("#clock-period");
+    const progress = $("#sim-progress-bar");
+    const ball = $("#ball-actor");
+    const scrubber = $("#progress-track");
+    const speedButtons = $$(".speed-btn", section(1));
+
     function updateClock() {
-      if (clock) clock.textContent = `${String(minute).padStart(2, "0")}:00`;
-      if (period)
-        period.textContent =
-          minute <= 45 ? "1T" : minute < 90 ? "2T" : "FINALIZADO";
-      if (progress) progress.style.width = (minute / 90) * 100 + "%";
-      if (pitch) pitch.update(minute, speed);
-      else if (ball) {
-        ball.style.left = "50%";
-        ball.style.top = "50%";
+      if (clock) clock.textContent = String(minute).padStart(2, "0") + ":00";
+      if (period) period.textContent =
+        minute < 45 ? "1T" : minute === 45 ? "DESCANSO" :
+        minute < 90 ? "2T" : "FINALIZADO";
+      if (progress) progress.style.width = minute / 90 * 100 + "%";
+      if (scrubber) {
+        scrubber.setAttribute("aria-valuenow", String(minute));
+        scrubber.setAttribute("aria-valuetext", "Minuto " + minute + " de 90");
       }
-      if (scoreA)
-        scoreA.textContent = String(
-          m.report.events.filter(
-            (e) => e.type === "GOL" && e.side === "A" && e.minute <= minute,
-          ).length,
-        );
-      if (scoreB)
-        scoreB.textContent = String(
-          m.report.events.filter(
-            (e) => e.type === "GOL" && e.side === "B" && e.minute <= minute,
-          ).length,
-        );
+      if (pitch) pitch.update(minute, speed);
+      else if (ball) { ball.style.left = "50%"; ball.style.top = "50%"; }
+
+      // Los goles mostrados provienen del reporte guardado, no del movimiento 2D.
+      const events = m.report.events || [];
+      if (scoreA) scoreA.textContent = String(minute === 90 ?
+        m.scoreA : events.filter((e) =>
+          e.type === "GOL" && e.side === "A" && e.minute <= minute).length);
+      if (scoreB) scoreB.textContent = String(minute === 90 ?
+        m.scoreB : events.filter((e) =>
+          e.type === "GOL" && e.side === "B" && e.minute <= minute).length);
       $$("[data-event-minute]", tick).forEach((el) => {
-        const show = Number(el.dataset.eventMinute) <= minute;
-        el.classList.toggle("arena-event-future", !show);
+        el.classList.toggle("arena-event-future",
+          Number(el.dataset.eventMinute) > minute);
       });
     }
+    function stopFrames() {
+      if (frameHandle != null) window.cancelAnimationFrame?.(frameHandle);
+      frameHandle = null;
+      frameStart = null;
+    }
+    function animateFrames(timestamp) {
+      if (!timer || document.visibilityState === "hidden") {
+        stopFrames();
+        return;
+      }
+      if (frameStart === null) frameStart = timestamp;
+      const fraction = Math.min(.995,
+        Math.max(0, (timestamp - frameStart) / (450 / speed)));
+      pitch?.update(Math.min(90, minute + fraction), speed);
+      frameHandle = window.requestAnimationFrame(animateFrames);
+    }
+    function beginFrames() {
+      if (reducedMotion || !pitch || !window.requestAnimationFrame ||
+          document.visibilityState === "hidden") return;
+      stopFrames();
+      frameHandle = window.requestAnimationFrame(animateFrames);
+    }
     function pause() {
-      if (timer) clearInterval(timer);
+      if (timer != null) clearInterval(timer);
       timer = null;
+      stopFrames();
+      pitch?.update(minute, speed);
       const label = $("#btn-play-label");
       if (label) label.textContent = minute === 90 ? "Reproducir" : "Continuar";
     }
+    function seekTo(targetMinute) {
+      pause();
+      minute = Math.max(0, Math.min(90, Math.round(targetMinute)));
+      chooseHalf(minute <= 45 ? 1 : minute < 90 ? 2 : 3);
+      updateClock();
+    }
     function play(reset = false) {
-      if (timer) return;
+      if (timer != null) return;
       if (reset || minute >= 90) minute = 0;
       const label = $("#btn-play-label");
       if (label) label.textContent = "Reproduciendo";
       updateClock();
       timer = setInterval(() => {
         minute = Math.min(90, minute + 1);
+        frameStart = null;
         updateClock();
         if (minute >= 90) {
           pause();
           chooseHalf(3);
         } else if (minute === 46) chooseHalf(2);
       }, 450 / speed);
+      beginFrames();
     }
     $("#btn-play")?.addEventListener("click", () => play());
     $("#btn-pause")?.addEventListener("click", pause);
-    $("#btn-reset")?.addEventListener("click", () => {
-      pause();
-      minute = 0;
-      chooseHalf(1);
-      updateClock();
-    });
+    $("#btn-reset")?.addEventListener("click", () => seekTo(0));
     $("#btn-jump")?.addEventListener("click", () => {
-      pause();
-      minute = 90;
-      updateClock();
-      chooseHalf(3);
+      seekTo(90);
       stats?.scrollIntoView({ behavior: "smooth" });
     });
-    $$("button", section(1))
-      .filter((b) => /^[12]X$/.test(b.textContent.trim()))
-      .forEach((b) =>
-        b.addEventListener("click", () => {
-          speed = parseInt(b.textContent, 10) || 1;
-          const running = !!timer;
-          if (running) {
-            pause();
-            play();
-          }
-        }),
-      );
+    speedButtons.forEach((button) => {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.speed) === speed));
+      button.addEventListener("click", () => {
+        const nextSpeed = Number(button.dataset.speed);
+        if (nextSpeed !== 1 && nextSpeed !== 2) return;
+        const running = timer != null;
+        if (running) pause();
+        speed = nextSpeed;
+        speedButtons.forEach((b) => {
+          const current = b === button;
+          b.classList.toggle("arena-filter-active", current);
+          b.setAttribute("aria-pressed", String(current));
+        });
+        if (running) play();
+        else pitch?.update(minute, speed);
+      });
+    });
+    if (scrubber) {
+      scrubber.addEventListener("click", (e) => {
+        const rect = scrubber.getBoundingClientRect();
+        if (!rect.width) return;
+        seekTo((e.clientX - rect.left) / rect.width * 90);
+      });
+      scrubber.addEventListener("keydown", (e) => {
+        const delta = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 :
+          e.key === "PageUp" ? 5 : e.key === "PageDown" ? -5 : 0;
+        if (delta || e.key === "Home" || e.key === "End") {
+          e.preventDefault();
+          seekTo(e.key === "Home" ? 0 : e.key === "End" ? 90 : minute + delta);
+        }
+      });
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        if (timer != null) pause();
+      }
+    });
     const heat = $("#toggle-heatmap");
     if (heat)
       heat.addEventListener("click", () => {
