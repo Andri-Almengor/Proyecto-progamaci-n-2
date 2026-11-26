@@ -2,7 +2,7 @@
 
 El encabezado con **VISITANTE**, **SIN INICIAR SESIÓN**, el ícono de persona ficticio y **DATOS ACTUALIZADOS** pertenece a **una versión anterior** de la interfaz Stitch.
 
-Desde la versión `2026-11-25-admin-r3`, las ocho pantallas activas usan el mismo archivo
+Desde la versión `2026-11-26-tactics-r5`, las ocho pantallas activas usan el mismo archivo
 `web/WEB-INF/views/arena/partials/header.jspf`. No existen esos objetos en
 el encabezado vigente: el visitante ve únicamente **Iniciar sesión** a la
 derecha; al autenticarse ve su nombre y **Salir**, y únicamente un ADMIN ve la
@@ -24,7 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue
 ```
 
 El resultado indica si el servidor devuelve `X-Bracket-Arena-UI:
-2026-11-25-admin-r3` y si el HTML realmente contiene la barra actualizada. **No
+2026-11-26-tactics-r5` y si el HTML realmente contiene la barra actualizada. **No
 necesita conectarse a MySQL ni publicar contraseñas.** Un error al conectar
 significa que Tomcat, el puerto o la URL necesitan revisión.
 
@@ -83,13 +83,13 @@ Una página actual debe tener lo siguiente en **View page source / Ver código
 fuente**:
 
 ```html
-<header data-arena-shell="2026-11-25-admin-r3"
+<header data-arena-shell="2026-11-26-tactics-r5"
 ```
 
 Y la respuesta HTTP de `/app?view=inicio` debe tener:
 
 ```text
-X-Bracket-Arena-UI: 2026-11-25-admin-r3
+X-Bracket-Arena-UI: 2026-11-26-tactics-r5
 ```
 
 La primera comprobación identifica la JSP y la segunda el servlet. Si ninguna

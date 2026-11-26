@@ -8,7 +8,7 @@
 <!DOCTYPE html>
 
 <html class="light" lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="<%=request.getContextPath()%>/css/stitch.css?v=2026-11-25-admin-r3" rel="stylesheet"/><link href="<%=request.getContextPath()%>/css/stitch-bridge.css?v=2026-11-25-admin-r3" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased arena-loading" data-arena-page="bracket"><div aria-busy="true" aria-label="Cargando datos del torneo" id="arena-skeleton">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="<%=request.getContextPath()%>/css/stitch.css?v=2026-11-26-tactics-r5" rel="stylesheet"/><link href="<%=request.getContextPath()%>/css/stitch-bridge.css?v=2026-11-26-tactics-r5" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased arena-loading" data-arena-page="bracket"><div aria-busy="true" aria-label="Cargando datos del torneo" id="arena-skeleton">
 <div class="ske-nav"><div class="ske-block" style="width:160px;height:28px"></div><div class="ske-block" style="width:300px;height:16px"></div><div class="ske-block" style="width:120px;height:25px"></div></div>
 <div class="ske-hero"><div><div class="ske-block" style="width:110px;height:14px"></div><div class="ske-block" style="width:80%;height:52px"></div><div class="ske-block" style="width:66%;height:18px"></div><div class="ske-block" style="width:73%;height:18px"></div><div class="ske-block" style="width:45%;height:35px"></div></div><div class="ske-block ske-cover"></div></div>
 <div class="ske-cards"><div class="ske-block"></div><div class="ske-block"></div><div class="ske-block"></div><div class="ske-block"></div></div>
@@ -20,13 +20,13 @@
 <div class="flex items-center gap-space-sm">
 <span class="font-label-sm text-label-sm uppercase px-2 py-0.5 rounded bg-tertiary-container text-on-tertiary">Fase Eliminatoria</span>
 <span class="text-on-surface-variant font-label-sm text-label-sm">/</span>
-<span class="font-headline-md text-headline-md text-on-surface tracking-tight uppercase">Gran Copa Nacional 2026 - Cuadro Simétrico Oficial</span>
+<span class="font-headline-md text-headline-md text-on-surface tracking-tight uppercase"><span id="arena-bracket-title">Cuadro eliminatorio oficial</span></span>
 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary-container text-on-secondary-container tracking-wider uppercase">16 Equipos • Knockout Directo</span>
 </div>
 <div class="flex items-center gap-space-sm">
 <div class="flex items-center gap-1.5 px-3 py-1 bg-surface rounded-lg shadow-sm">
 <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-<span class="font-label-sm text-label-sm text-on-surface uppercase tracking-wider">Premio Mayor: ₡ 5,000,000</span>
+<span class="font-label-sm text-label-sm text-on-surface uppercase tracking-wider"><span id="arena-bracket-prize">Premio por confirmar</span></span>
 </div>
 <button class="px-3 py-1 bg-surface-container hover:bg-surface-container-high rounded font-label-sm text-label-sm uppercase text-on-surface flex items-center gap-1 transition-colors" id="btn-export-bracket">
 <span class="material-symbols-outlined text-[15px]">file_download</span>
@@ -35,18 +35,18 @@
 </div>
 </div>
 <!-- Interactive Controls Hub -->
-<div class="w-full bg-surface px-margin py-space-md shadow-sm z-30 sticky top-20">
+<div class="arena-bracket-controls w-full bg-surface px-margin py-space-md shadow-sm z-30 sticky top-20">
 <div class="flex flex-wrap items-center justify-between gap-space-md">
 <!-- Search Competitor & Filter Stage -->
 <div class="flex items-center flex-wrap gap-space-sm">
-<div class="relative w-72">
+<div class="relative w-72 arena-bracket-search">
 <span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">search</span>
-<input class="w-full bg-surface-container-low pl-9 pr-3 py-1.5 rounded text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface transition-all placeholder:text-on-surface-variant/60" id="bracket-search" placeholder="Buscar equipo (ej. Saprissa, Herediano)..." type="text"/>
-<button class="hidden absolute right-2.5 top-2 text-on-surface-variant hover:text-on-surface" id="clear-search">
+<input class="w-full bg-surface-container-low pl-9 pr-3 py-1.5 rounded text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface transition-all placeholder:text-on-surface-variant/60" id="bracket-search" placeholder="Buscar equipo en cualquier ronda..." type="text"/>
+<button type="button" class="hidden absolute right-2.5 top-2 text-on-surface-variant hover:text-on-surface" id="clear-search" aria-label="Borrar búsqueda">
 <span class="material-symbols-outlined text-[16px]">close</span>
 </button>
 </div>
-<div class="flex items-center bg-surface-container-low p-1 rounded">
+<div class="arena-desktop-bracket-filters flex items-center bg-surface-container-low p-1 rounded">
 <button class="filter-btn active-filter px-3 py-1 rounded bg-primary text-on-primary font-label-sm text-label-sm uppercase transition-all" data-filter="all">Todos</button>
 <button class="filter-btn px-3 py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase transition-all" data-filter="octavos">Octavos</button>
 <button class="filter-btn px-3 py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm uppercase transition-all" data-filter="cuartos">Cuartos</button>
@@ -61,7 +61,7 @@
 <span id="scores-label">Ocultar Marcadores (Modo Spoiler)</span>
 </button>
 <div class="h-6 w-px bg-surface-container-highest"></div>
-<div class="flex items-center bg-surface-container-low rounded p-0.5">
+<div class="arena-desktop-zoom flex items-center bg-surface-container-low rounded p-0.5">
 <button class="w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container rounded transition-colors" id="zoom-out" title="Alejar Zoom">
 <span class="material-symbols-outlined text-[18px]">zoom_out</span>
 </button>
@@ -97,9 +97,9 @@
 </div>
 </div>
 <div class="flex items-center gap-space-sm">
-<span>Estadio Nacional de Costa Rica • Domingo 20:00 CST</span>
+<span>15 encuentros eliminatorios</span>
 <span>•</span>
-<span class="text-on-surface font-bold">Árbitro Central: Juan Gabriel Calderón</span>
+<span class="text-on-surface font-bold">Información y marcadores actualizados</span>
 </div>
 </div>
 <!-- Main Bracket Panoramic Canvas Wrapper -->
@@ -110,34 +110,34 @@
 <div class="grid grid-cols-7 gap-4 mb-4 text-center items-center">
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Octavos Izquierda</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Sábado 15 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Cuartos Izquierda</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Miércoles 19 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Semifinal A</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Sábado 22 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-tertiary-container py-2 rounded shadow-sm">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-secondary-fixed font-bold flex items-center justify-center gap-1">
 <span class="material-symbols-outlined text-[16px] text-secondary">emoji_events</span>
             GRAN FINAL
           </span>
-<p class="font-label-sm text-[10px] text-on-tertiary-container">Domingo 30 Mar • 20:00 CST</p>
+<p class="font-label-sm text-[10px] text-on-tertiary-container">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Semifinal B</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Domingo 23 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Cuartos Derecha</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Jueves 20 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 <div class="col-stage bg-surface-container-high py-2 rounded">
 <span class="font-headline-md text-[13px] uppercase tracking-wider text-on-surface font-bold">Octavos Derecha</span>
-<p class="font-label-sm text-[10px] text-on-surface-variant">Domingo 16 Mar</p>
+<p class="font-label-sm text-[10px] text-on-surface-variant">Fecha por confirmar</p>
 </div>
 </div>
 <!-- 7-COLUMN SYMMETRIC GRID WITH BRACKET CARDS -->
@@ -351,8 +351,8 @@
 <div class="stage-col flex flex-col items-center justify-center relative px-1" data-stage="final">
 <!-- Finalist A (Top Finalist Box) -->
 <div class="w-full bg-surface-container-low p-2 rounded mb-3 text-center shadow-sm">
-<span class="font-label-sm text-[9px] uppercase tracking-widest text-on-surface-variant">Finalista Conferencia Oeste</span>
-<div class="font-headline-md text-[14px] text-on-surface font-bold mt-0.5 truncate">Saprissa de Moravia</div>
+<span class="font-label-sm text-[9px] uppercase tracking-widest text-on-surface-variant">Finalista del primer cruce</span>
+<div data-arena-finalist="A" class="font-headline-md text-[14px] text-on-surface font-bold mt-0.5 truncate">Por definir</div>
 </div>
 <!-- THE TROPHY MONOLITH PEDESTAL -->
 <div class="relative w-full max-w-[210px] flex flex-col items-center py-4 px-3 rounded-lg bg-gradient-to-b from-surface via-surface-container-low to-surface-container shadow-xl overflow-hidden group">
@@ -361,7 +361,7 @@
 <!-- Crown / Ribbon Header -->
 <div class="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[9px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1 shadow-sm">
 <span class="material-symbols-outlined text-[12px] text-secondary">military_tech</span>
-              Copa Premier 2026
+              <span id="arena-bracket-trophy-name">Torneo 2026</span>
             </div>
 <!-- Realistic Trophy Graphic (SVG) -->
 <div class="relative my-2 transform group-hover:scale-105 transition-transform duration-300">
@@ -373,7 +373,7 @@
 <div class="w-full bg-surface p-2.5 rounded shadow-sm hover:shadow-md transition-all cursor-pointer mt-1" data-date="Dom 30 Mar • 20:00 CST" data-match-id="M-GRAND-FINAL" data-s1="2" data-s2="1" data-stadium="Estadio Nacional La Sabana" data-stage="Gran Final Nacional" data-t1="Saprissa de Moravia" data-t2="Alajuelense Manudos" data-winner="Saprissa de Moravia">
 <div class="flex items-center justify-between text-[9px] font-label-sm text-secondary font-bold uppercase mb-1">
 <span>GRAN FINAL</span>
-<span class="px-1 py-0.2 bg-secondary/10 rounded">EN VIVO</span>
+<span data-arena-final-status class="px-1 py-0.2 bg-secondary/10 rounded">PENDIENTE</span>
 </div>
 <!-- Team Final A -->
 <div class="flex items-center justify-between py-1 px-1.5 rounded bg-surface-container-high text-on-surface">
@@ -394,8 +394,8 @@
 </div>
 <!-- Finalist B (Bottom Finalist Box) -->
 <div class="w-full bg-surface-container-low p-2 rounded mt-3 text-center shadow-sm">
-<span class="font-label-sm text-[9px] uppercase tracking-widest text-on-surface-variant">Finalista Conferencia Este</span>
-<div class="font-headline-md text-[14px] text-on-surface font-bold mt-0.5 truncate">Alajuelense Manudos</div>
+<span class="font-label-sm text-[9px] uppercase tracking-widest text-on-surface-variant">Finalista del segundo cruce</span>
+<div data-arena-finalist="B" class="font-headline-md text-[14px] text-on-surface font-bold mt-0.5 truncate">Por definir</div>
 </div>
 </div>
 <!-- ============================================== -->
@@ -758,4 +758,4 @@
 <!-- Drawer Backdrop Overlay -->
 <div class="fixed inset-0 bg-primary/40 backdrop-blur-xs z-40 hidden transition-opacity duration-300" id="drawer-backdrop"></div>
 </div>
-</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-25-admin-r3"></script></body></html>
+</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-26-tactics-r5"></script></body></html>

@@ -113,4 +113,8 @@ La barra superior es compartida por todas las páginas. Los visitantes reciben e
 
 ## Si aún aparece el encabezado viejo en NetBeans/Tomcat
 
-Si ves «VISITANTE», «SIN INICIAR SESIÓN», un avatar ficticio o «DATOS ACTUALIZADOS», tu navegador probablemente está viendo un despliegue anterior. Ejecutá en PowerShell `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue.ps1` y consultá **[docs/DESPLIEGUE_NETBEANS.md](docs/DESPLIEGUE_NETBEANS.md)**. El servidor actual debe devolver la cabecera `X-Bracket-Arena-UI: 2026-11-25-admin-r3`. No es necesario reinstalar MySQL.
+Si ves «VISITANTE», «SIN INICIAR SESIÓN», un avatar ficticio o «DATOS ACTUALIZADOS», tu navegador probablemente está viendo un despliegue anterior. Ejecutá en PowerShell `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue.ps1` y consultá **[docs/DESPLIEGUE_NETBEANS.md](docs/DESPLIEGUE_NETBEANS.md)**. El servidor actual debe devolver la cabecera `X-Bracket-Arena-UI: 2026-11-26-tactics-r5`. No es necesario reinstalar MySQL.
+
+
+### Replay táctico mejorado (etapa 3)
+El encuentro finalizado se reproduce en una cancha 2D con 22 fichas, formaciones dinámicas, trayectorias continuas del balón (pases y centros), presión, recuperación y tiros visuales. Se puede pausar, avanzar por eventos, cambiar entre 1x/2x y buscar un minuto con el teclado o ratón. La visualización es **ilustrativa**: solo los eventos de goles del reporte de MySQL incrementan el marcador. No se almacenan posiciones ni se recalculan los resultados.

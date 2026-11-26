@@ -491,6 +491,215 @@
       bottom.forEach((el) => (el.textContent = "SIN SISTEMA DE SANCIONES"));
     }
   }
+  // ETAPA 2 (ampliación): cuadro móvil accesible, búsqueda global y en vivo.
+  // El panorama de escritorio sigue independiente para no alterar su diseño.
+  let mobileRoundChoice = null;
+  let mobileFocusHandled = false;
+  let desktopFocusHandled = false;
+  let bracketScoresVisible = true;
+  const roundNames = ["", "Octavos", "Cuartos", "Semifinales", "Final"];
+  const searchable = (value) => String(value || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
+
+  function focusBracketOnDesktop(d) {
+    if (desktopFocusHandled || !d?.tournament ||
+        window.matchMedia?.("(max-width: 767px)").matches) return;
+    const id = Number(new URLSearchParams(location.search).get("focusMatch"));
+    if (!id || !d.matches.some((m) => m.id === id)) return;
+    const card = $('[data-real-match-id="' + id + '"]', $("#bracket-stage"));
+    if (!card) return;
+    desktopFocusHandled = true;
+    card.classList.add("arena-bracket-focus");
+    window.requestAnimationFrame?.(() =>
+      card.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "center" }));
+  }
+
+  function renderMobileBracket(d) {
+    const viewport = $("#bracket-viewport");
+    if (!viewport || !d) return;
+    let mobile = $("#arena-mobile-bracket");
+    if (!mobile) {
+      mobile = document.createElement("section");
+      mobile.id = "arena-mobile-bracket";
+      mobile.className = "arena-mobile-bracket";
+      mobile.setAttribute("aria-label", "Cuadro del torneo por rondas");
+      viewport.parentNode.insertBefore(mobile, viewport);
+
+      const chooseRound = (round, focusTab = false) => {
+        if (!Number.isInteger(round) || round < 1 || round > 4) return;
+        mobileRoundChoice = round;
+        renderMobileBracket(state.data);
+        if (focusTab) mobile.querySelector?.('[data-mobile-round="' + round + '"]')
+          ?.focus?.({ preventScroll: true });
+      };
+      mobile.addEventListener("click", (event) => {
+        const tab = event.target.closest("[data-mobile-round]");
+        if (tab) { chooseRound(Number(tab.dataset.mobileRound), true); return; }
+        const prevNext = event.target.closest("[data-mobile-step]");
+        if (prevNext) {
+          chooseRound(mobileRoundChoice + Number(prevNext.dataset.mobileStep), true);
+          return;
+        }
+        const goLive = event.target.closest("[data-mobile-live]");
+        if (goLive) {
+          const liveMatch = state.data?.matches.find((m) => m.live) ||
+            state.data?.matches.find((m) => m.id === state.data?.live?.matchId);
+          if (!liveMatch) return;
+          const search = $("#bracket-search");
+          if (search) search.value = "";
+          $("#clear-search")?.classList.add("hidden");
+          chooseRound(liveMatch.round);
+          mobile.querySelector?.('[data-mobile-match="' + liveMatch.id + '"]')
+            ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+          return;
+        }
+        const button = event.target.closest("[data-mobile-match]");
+        if (!button) return;
+        const match = state.data?.matches.find(
+          (m) => m.id === Number(button.dataset.mobileMatch));
+        if (!match) return;
+        const card = $('[data-real-match-id="' + match.id + '"]', $("#bracket-stage")) ||
+          { dataset: { winner: match.done ? (match.winnerId === match.aId ?
+            match.aName : match.bName) : "Por definir" } };
+        openMatchDrawer(match, card);
+      });
+      mobile.addEventListener("keydown", (event) => {
+        const tab = event.target.closest("[data-mobile-round]");
+        if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const current = Number(tab.dataset.mobileRound);
+        const next = event.key === "Home" ? 1 : event.key === "End" ? 4 :
+          Math.max(1, Math.min(4, current + (event.key === "ArrowRight" ? 1 : -1)));
+        chooseRound(next, true);
+      });
+    }
+
+    const matches = Array.isArray(d.matches) ? d.matches : [];
+    if (!d.tournament) {
+      const empty = '<div class="arena-mobile-empty">' +
+        note("Todavía no se ha creado el cuadro del torneo. Cuando se registren los 16 equipos participantes, aparecerán las cuatro rondas.", "CUADRO POR DEFINIR") +
+        '</div>';
+      if (mobile.innerHTML !== empty) mobile.innerHTML = empty;
+      return;
+    }
+
+    const focusId = Number(new URLSearchParams(location.search).get("focusMatch"));
+    const focus = matches.find((m) => m.id === focusId);
+    const live = matches.find((m) => m.live) ||
+      matches.find((m) => m.id === d.live?.matchId &&
+        d.live?.phase === "PLAYING");
+    if (!mobileRoundChoice) mobileRoundChoice = focus?.round || live?.round ||
+      matches.find((m) => m.ready && !m.done)?.round || 1;
+
+    const query = searchable($("#bracket-search")?.value);
+    const selected = matches.filter((m) => m.round === mobileRoundChoice);
+    // La búsqueda no debe ignorar equipos que aparecen en otra ronda.
+    const results = (query ? matches.filter((m) =>
+      searchable(m.aName).includes(query) || searchable(m.bName).includes(query)
+    ) : selected).sort((x, y) => x.round - y.round || x.position - y.position);
+    const completed = matches.filter((m) => m.done).length;
+    const gamesCount = matches.length || 15;
+    const percent = Math.min(100, Math.round(completed / gamesCount * 100));
+    const row = (m, side) => {
+      const isHome = side === "A";
+      const name = (isHome ? m.aName : m.bName) || "Por definir";
+      const teamId = isHome ? m.aId : m.bId;
+      const winner = !!m.done && teamId != null && m.winnerId === teamId;
+      const score = isHome ? m.scoreA : m.scoreB;
+      const visibleScore = bracketScoresVisible && (m.done || m.live);
+      return '<div class="arena-mobile-team" data-winner="' + winner + '">' +
+        '<span class="arena-mobile-crest">' + esc(short(name)) + '</span>' +
+        '<span class="arena-mobile-team-name">' + esc(name) + '</span>' +
+        '<span class="arena-mobile-result">' +
+        esc(visibleScore ? (score ?? 0) : "—") + '</span></div>';
+    };
+    const card = (m) => {
+      const playing = !!m.live || (d.live?.phase === "PLAYING" && d.live.matchId === m.id);
+      const status = playing ? "● EN VIVO" : m.done ? "FINALIZADO" :
+        m.ready ? "LISTO" : "PENDIENTE";
+      const scoresText = bracketScoresVisible && (m.done || playing) ?
+        " · " + (m.scoreA ?? 0) + " a " + (m.scoreB ?? 0) : "";
+      return '<button type="button" class="arena-mobile-match" data-mobile-match="' +
+        Number(m.id) + '" data-live="' + playing +
+        '" data-focused="' + (focusId === m.id) +
+        '" aria-label="' + esc(roundNames[m.round] + " " + m.position +
+        ": " + (m.aName || "Por definir") + " contra " +
+        (m.bName || "Por definir") + scoresText + ", " + status) + '">' +
+        '<div class="arena-mobile-match-top"><span>' +
+        (query ? esc(roundNames[m.round]) + " · " : "") +
+        'Partido ' + m.position + '</span><span class="arena-mobile-status">' +
+        status + (playing && Number.isFinite(d.live?.minute) ?
+          " · " + d.live.minute + "'" : "") +
+        '</span></div>' + row(m, "A") + row(m, "B") +
+        '<div class="arena-mobile-match-bottom"><span>' +
+        (m.done ? "Resultado definitivo" : playing ? "Marcador en directo" :
+          "Por disputar") +
+        '</span><span class="arena-mobile-detail">Ver detalle</span></div></button>';
+    };
+    const markup =
+      '<div class="arena-mobile-progress" role="status">' +
+      '<span>Progreso del torneo</span><strong>' + completed + ' de ' +
+      gamesCount + ' partidos</strong><div class="arena-mobile-progress-track">' +
+      '<div style="width:' + percent + '%"></div></div></div>' +
+      (live ? '<button type="button" class="arena-mobile-live-jump" data-mobile-live="true">' +
+        '<span>● EN VIVO · ' + esc(roundNames[live.round]) +
+        ' · ' + esc(live.aName || "Por definir") + ' vs ' +
+        esc(live.bName || "Por definir") +
+        '</span><strong>Ir al partido</strong></button>' : "") +
+      '<div class="arena-mobile-rounds" role="tablist" aria-label="Fase del torneo">' +
+      roundNames.slice(1).map((name, index) => {
+        const round = index + 1;
+        const all = matches.filter((m) => m.round === round);
+        const completedRound = all.filter((m) => m.done).length;
+        return '<button type="button" role="tab" class="arena-mobile-round" ' +
+          'data-mobile-round="' + round + '" aria-controls="arena-mobile-round-results" ' +
+          'tabindex="' + (round === mobileRoundChoice ? "0" : "-1") + '" ' +
+          'aria-selected="' + (round === mobileRoundChoice) + '">' +
+          '<span>' + name + '</span><small>' + completedRound + '/' +
+          (all.length || [0,8,4,2,1][round]) + '</small></button>';
+      }).join("") + '</div>' +
+      '<div class="arena-mobile-round-title"><span>' +
+      (query ? "Resultados en todas las rondas" : roundNames[mobileRoundChoice]) +
+      '</span><span>' + results.length + ' partido' +
+      (results.length === 1 ? "" : "s") + '</span></div>' +
+      '<div id="arena-mobile-round-results" class="arena-mobile-match-list" ' +
+      'role="tabpanel" aria-label="Partidos del torneo">' +
+      (results.length ? results.map(card).join("") :
+        '<p class="arena-mobile-empty-results">' +
+        (query ? "No hay equipos que coincidan con la búsqueda." :
+          "No hay partidos disponibles en esta ronda.") + '</p>') +
+      '</div>' +
+      '<div class="arena-mobile-pager">' +
+      '<button type="button" data-mobile-step="-1" ' +
+      (mobileRoundChoice === 1 ? "disabled " : "") +
+      'aria-label="Ronda anterior">Anterior</button>' +
+      '<button type="button" data-mobile-step="1" ' +
+      (mobileRoundChoice === 4 ? "disabled " : "") +
+      'aria-label="Ronda siguiente">Siguiente</button></div>';
+
+    if (mobile.innerHTML !== markup) {
+      // Preservar el foco de teclado cuando el polling actualiza los marcadores.
+      const active = document.activeElement;
+      const hadFocus = !!(active && mobile.contains?.(active));
+      const focusRound = hadFocus ? active.getAttribute?.("data-mobile-round") : null;
+      const focusMatch = hadFocus ? active.getAttribute?.("data-mobile-match") : null;
+      mobile.innerHTML = markup;
+      const restoreSelector = focusRound ? '[data-mobile-round="' + focusRound + '"]' :
+        focusMatch ? '[data-mobile-match="' + focusMatch + '"]' : null;
+      if (restoreSelector) mobile.querySelector?.(restoreSelector)
+        ?.focus?.({ preventScroll: true });
+    }
+    if (focus && !mobileFocusHandled &&
+        window.matchMedia?.("(max-width: 767px)").matches && !query) {
+      const target = mobile.querySelector?.('[data-mobile-match="' + focus.id + '"]');
+      if (target) {
+        mobileFocusHandled = true;
+        window.requestAnimationFrame?.(() =>
+          target.scrollIntoView?.({ behavior: "smooth", block: "center" }));
+      }
+    }
+  }
+
   /** Dibuja las 15 posiciones y resultados del cuadro eliminatorio. */
   function drawBracket(d) {
     const main = $("main"),
@@ -503,6 +712,14 @@
       title.textContent = d.tournament
         ? `${d.tournament.name} — CUADRO ELIMINATORIO`
         : "CUADRO ELIMINATORIO — 2026";
+    const bracketTitle = $("#arena-bracket-title");
+    if (bracketTitle) bracketTitle.textContent = d.tournament?.name
+      ? d.tournament.name + " · Cuadro eliminatorio" : "Cuadro eliminatorio";
+    const bracketPrize = $("#arena-bracket-prize");
+    if (bracketPrize) bracketPrize.textContent = d.tournament
+      ? "Premio mayor: ₡ " + number(d.tournament.prize) : "Premio por confirmar";
+    const trophyName = $("#arena-bracket-trophy-name");
+    if (trophyName) trophyName.textContent = d.tournament?.name || "Torneo 2026";
     const coords = {
       "M-OCT-L1": [1, 1],
       "M-OCT-L2": [1, 2],
@@ -581,6 +798,10 @@
             );
           });
         } else if (spec[0] === 4) {
+          const firstFinalist = $('[data-arena-finalist="A"]');
+          const secondFinalist = $('[data-arena-finalist="B"]');
+          if (firstFinalist) firstFinalist.textContent = m.aName || "Por definir";
+          if (secondFinalist) secondFinalist.textContent = m.bName || "Por definir";
           const nameSpans = $$("span.truncate", card);
           if (nameSpans[0]) nameSpans[0].textContent = m.aName || "Por definir";
           if (nameSpans[1]) nameSpans[1].textContent = m.bName || "Por definir";
@@ -592,6 +813,10 @@
         const header = $("div.flex.items-center.justify-between span", card);
         if (header)
           header.textContent = `${["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][m.round]} ${m.position} • ${m.done ? "FINALIZADO" : m.ready ? "LISTO" : "PENDIENTE"}`;
+        const finalBadge = $('[data-arena-final-status]', card);
+        if (finalBadge) finalBadge.textContent =
+          m.live ? "EN VIVO" : m.done ? "FINALIZADO" :
+          m.ready ? "LISTO" : "PENDIENTE";
         const last = $("div.mt-1,div.mt-2", card);
         if (last && spec[0] === 3)
           last.innerHTML = `<span class="text-secondary">${m.done ? "Clasificado: " + esc(card.dataset.winner) : "Camino a la final"}</span><span>${m.done ? "90\u2032" : "Por jugar"}</span>`;
@@ -617,6 +842,8 @@
         });
       });
     }
+    renderMobileBracket(d);
+    focusBracketOnDesktop(d);
     let zoom = 1;
     const zoomLabel = $("#zoom-level");
     const doZoom = (n) => {
@@ -630,12 +857,14 @@
     let scores = true;
     $("#toggle-scores")?.addEventListener("click", () => {
       scores = !scores;
+      bracketScoresVisible = scores;
       $$(".score-pill", main).forEach((e) => {
         if (!scores) {
           e.dataset.original = e.textContent;
           e.textContent = "—";
         } else e.textContent = e.dataset.original || "—";
       });
+      renderMobileBracket(state.data);
       const label = $("#scores-label");
       if (label)
         label.textContent = scores
@@ -654,6 +883,7 @@
         ),
       );
       $("#clear-search")?.classList.toggle("hidden", !q);
+      renderMobileBracket(state.data);
     });
     $("#clear-search")?.addEventListener("click", () => {
       input.value = "";
@@ -1066,7 +1296,7 @@
     }
     const main = $("main");
     if (m.live && d.live?.phase === "PLAYING") {
-      main.innerHTML = '<section class="max-w-4xl mx-auto py-12 px-margin"><h1 class="font-headline-xl text-headline-xl">PARTIDO EN VIVO</h1><p class="mt-3">El marcador y las estadísticas se actualizan automáticamente. El resultado definitivo se guardará al terminar el minuto 90 virtual.</p><a class="arena-action mt-4" href="' + go("cuadro") + '">Ver cuadro completo</a></section>';
+      location.replace(go("cuadro", "&focusMatch=" + m.id));
       return;
     }
     if (!m.done || !m.report) {
@@ -1205,89 +1435,173 @@
       b.addEventListener("click", () => chooseHalf(i + 1)),
     );
     chooseHalf(3);
-    // Progresión estrictamente visual de 0 a 90, nunca altera la BD.
-    let minute = 90,
-      timer = null,
-      speed = 1;
-    const clock = $("#clock-display"),
-      period = $("#clock-period"),
-      progress = $("#sim-progress-bar"),
-      ball = $("#ball-actor");
+    // ETAPA 3: 22 jugadores y balón sincronizados con el replay existente.
+    // El posicionamiento es ilustrativo; los goles sí vienen de /arena-data.
+    const pitch = window.ArenaPitch?.create($("#arena-pitch"), {
+      id: m.id, home: m.aName, away: m.bName, events: m.report.events
+    });
+    const markers = $("#arena-event-markers");
+    if (markers) {
+      markers.innerHTML =
+        '<div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left:50%" aria-hidden="true"></div>' +
+        (m.report.events || []).map((event) => {
+          const minute = Math.max(0, Math.min(90, Number(event.minute) || 0));
+          const goal = event.type === "GOL";
+          const label = minute + "' " + (goal ? "Gol" : "Cambio") +
+            " · " + (event.team || "");
+          return '<button type="button" class="arena-replay-marker absolute -top-4 -ml-2 w-4 h-4 rounded-full flex items-center justify-center" ' +
+            'style="left:' + (minute / 90 * 100).toFixed(2) + '%;background:' +
+            (goal ? '#d97706' : '#374151') + ';color:#fff" data-minute="' + minute +
+            '" aria-label="' + esc(label) + '" title="' + esc(label) + '">' +
+            '<span class="material-symbols-outlined text-[11px]">' +
+            (goal ? "sports_soccer" : "sync") + '</span></button>';
+        }).join("");
+      $$(".arena-replay-marker", markers).forEach((button) =>
+        button.addEventListener("click", () => {
+          pause();
+          minute = Math.max(0, Math.min(90, Number(button.dataset.minute)));
+          updateClock();
+        })
+      );
+    }
+    // La reproducción es únicamente visual. Cada minuto virtual = 450ms a 1x.
+    // Interpolación por requestAnimationFrame entre minutos, sin modificar la BD.
+    let minute = 90;
+    let timer = null;
+    let speed = 1;
+    let frameHandle = null;
+    let frameStart = null;
+    const reducedMotion = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const clock = $("#clock-display");
+    const period = $("#clock-period");
+    const progress = $("#sim-progress-bar");
+    const ball = $("#ball-actor");
+    const scrubber = $("#progress-track");
+    const speedButtons = $$(".speed-btn", section(1));
+
     function updateClock() {
-      if (clock) clock.textContent = `${String(minute).padStart(2, "0")}:00`;
-      if (period)
-        period.textContent =
-          minute <= 45 ? "1T" : minute < 90 ? "2T" : "FINALIZADO";
-      if (progress) progress.style.width = (minute / 90) * 100 + "%";
-      if (ball) {
-        ball.style.left = `${13 + (Math.sin(minute / 9) * 0.5 + 0.5) * 72}%`;
-        ball.style.top = `${20 + (Math.cos(minute / 5) * 0.5 + 0.5) * 55}%`;
+      if (clock) clock.textContent = String(minute).padStart(2, "0") + ":00";
+      if (period) period.textContent =
+        minute < 45 ? "1T" : minute === 45 ? "DESCANSO" :
+        minute < 90 ? "2T" : "FINALIZADO";
+      if (progress) progress.style.width = minute / 90 * 100 + "%";
+      if (scrubber) {
+        scrubber.setAttribute("aria-valuenow", String(minute));
+        scrubber.setAttribute("aria-valuetext", "Minuto " + minute + " de 90");
       }
-      if (scoreA)
-        scoreA.textContent = String(
-          m.report.events.filter(
-            (e) => e.type === "GOL" && e.side === "A" && e.minute <= minute,
-          ).length,
-        );
-      if (scoreB)
-        scoreB.textContent = String(
-          m.report.events.filter(
-            (e) => e.type === "GOL" && e.side === "B" && e.minute <= minute,
-          ).length,
-        );
+      if (pitch) pitch.update(minute, speed);
+      else if (ball) { ball.style.left = "50%"; ball.style.top = "50%"; }
+
+      // Los goles mostrados provienen del reporte guardado, no del movimiento 2D.
+      const events = m.report.events || [];
+      if (scoreA) scoreA.textContent = String(minute === 90 ?
+        m.scoreA : events.filter((e) =>
+          e.type === "GOL" && e.side === "A" && e.minute <= minute).length);
+      if (scoreB) scoreB.textContent = String(minute === 90 ?
+        m.scoreB : events.filter((e) =>
+          e.type === "GOL" && e.side === "B" && e.minute <= minute).length);
       $$("[data-event-minute]", tick).forEach((el) => {
-        const show = Number(el.dataset.eventMinute) <= minute;
-        el.classList.toggle("arena-event-future", !show);
+        el.classList.toggle("arena-event-future",
+          Number(el.dataset.eventMinute) > minute);
       });
     }
+    function stopFrames() {
+      if (frameHandle != null) window.cancelAnimationFrame?.(frameHandle);
+      frameHandle = null;
+      frameStart = null;
+    }
+    function animateFrames(timestamp) {
+      if (!timer || document.visibilityState === "hidden") {
+        stopFrames();
+        return;
+      }
+      if (frameStart === null) frameStart = timestamp;
+      const fraction = Math.min(.995,
+        Math.max(0, (timestamp - frameStart) / (450 / speed)));
+      pitch?.update(Math.min(90, minute + fraction), speed);
+      frameHandle = window.requestAnimationFrame(animateFrames);
+    }
+    function beginFrames() {
+      if (reducedMotion || !pitch || !window.requestAnimationFrame ||
+          document.visibilityState === "hidden") return;
+      stopFrames();
+      frameHandle = window.requestAnimationFrame(animateFrames);
+    }
     function pause() {
-      if (timer) clearInterval(timer);
+      if (timer != null) clearInterval(timer);
       timer = null;
+      stopFrames();
+      pitch?.update(minute, speed);
       const label = $("#btn-play-label");
       if (label) label.textContent = minute === 90 ? "Reproducir" : "Continuar";
     }
+    function seekTo(targetMinute) {
+      pause();
+      minute = Math.max(0, Math.min(90, Math.round(targetMinute)));
+      chooseHalf(minute <= 45 ? 1 : minute < 90 ? 2 : 3);
+      updateClock();
+    }
     function play(reset = false) {
-      if (timer) return;
+      if (timer != null) return;
       if (reset || minute >= 90) minute = 0;
       const label = $("#btn-play-label");
       if (label) label.textContent = "Reproduciendo";
       updateClock();
       timer = setInterval(() => {
         minute = Math.min(90, minute + 1);
+        frameStart = null;
         updateClock();
         if (minute >= 90) {
           pause();
           chooseHalf(3);
         } else if (minute === 46) chooseHalf(2);
       }, 450 / speed);
+      beginFrames();
     }
     $("#btn-play")?.addEventListener("click", () => play());
     $("#btn-pause")?.addEventListener("click", pause);
-    $("#btn-reset")?.addEventListener("click", () => {
-      pause();
-      minute = 0;
-      chooseHalf(1);
-      updateClock();
-    });
+    $("#btn-reset")?.addEventListener("click", () => seekTo(0));
     $("#btn-jump")?.addEventListener("click", () => {
-      pause();
-      minute = 90;
-      updateClock();
-      chooseHalf(3);
+      seekTo(90);
       stats?.scrollIntoView({ behavior: "smooth" });
     });
-    $$("button", section(1))
-      .filter((b) => /^[12]X$/.test(b.textContent.trim()))
-      .forEach((b) =>
-        b.addEventListener("click", () => {
-          speed = parseInt(b.textContent, 10) || 1;
-          const running = !!timer;
-          if (running) {
-            pause();
-            play();
-          }
-        }),
-      );
+    speedButtons.forEach((button) => {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.speed) === speed));
+      button.addEventListener("click", () => {
+        const nextSpeed = Number(button.dataset.speed);
+        if (nextSpeed !== 1 && nextSpeed !== 2) return;
+        const running = timer != null;
+        if (running) pause();
+        speed = nextSpeed;
+        speedButtons.forEach((b) => {
+          const current = b === button;
+          b.classList.toggle("arena-filter-active", current);
+          b.setAttribute("aria-pressed", String(current));
+        });
+        if (running) play();
+        else pitch?.update(minute, speed);
+      });
+    });
+    if (scrubber) {
+      scrubber.addEventListener("click", (e) => {
+        const rect = scrubber.getBoundingClientRect();
+        if (!rect.width) return;
+        seekTo((e.clientX - rect.left) / rect.width * 90);
+      });
+      scrubber.addEventListener("keydown", (e) => {
+        const delta = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 :
+          e.key === "PageUp" ? 5 : e.key === "PageDown" ? -5 : 0;
+        if (delta || e.key === "Home" || e.key === "End") {
+          e.preventDefault();
+          seekTo(e.key === "Home" ? 0 : e.key === "End" ? 90 : minute + delta);
+        }
+      });
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        if (timer != null) pause();
+      }
+    });
     const heat = $("#toggle-heatmap");
     if (heat)
       heat.addEventListener("click", () => {
@@ -1477,8 +1791,8 @@
       metric("Córners", total("cornersA"), total("cornersB")) +
       '</div><div class="arena-live-events">' +
       (events || 'Aún no hay goles ni sustituciones.') +
-      '</div><p class="mt-2"><a href="' + go("partido", "&id=" + match.id) +
-      '">Ver pantalla del partido</a> · Datos simulados</p>';
+      '</div><p class="mt-2"><a href="' + go("cuadro", "&focusMatch=" + match.id) +
+      '">Ver en el cuadro completo</a> · Datos simulados</p>';
   }
 
   /**
@@ -1519,6 +1833,16 @@
             ? String(side ? match.scoreB : match.scoreA) : "—";
         });
       }
+      const finalBadge = $('[data-arena-final-status]', card);
+      if (finalBadge) finalBadge.textContent =
+        match.live ? "EN VIVO" : match.done ? "FINALIZADO" :
+        match.ready ? "LISTO" : "PENDIENTE";
+      if (match.round === 4) {
+        const firstFinalist = $('[data-arena-finalist="A"]');
+        const secondFinalist = $('[data-arena-finalist="B"]');
+        if (firstFinalist) firstFinalist.textContent = match.aName || "Por definir";
+        if (secondFinalist) secondFinalist.textContent = match.bName || "Por definir";
+      }
       const status = $("div.flex.items-center.justify-between span", card);
       if (status) {
         const label = ["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][match.round];
@@ -1527,6 +1851,8 @@
             match.ready ? "LISTO" : "PENDIENTE");
       }
     }
+    renderMobileBracket(d);
+    focusBracketOnDesktop(d);
   }
 
   /** Consulta periódicamente y sincroniza a todos los espectadores sin recargar. */

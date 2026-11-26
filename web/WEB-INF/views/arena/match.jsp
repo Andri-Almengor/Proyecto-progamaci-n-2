@@ -8,7 +8,7 @@
 <!DOCTYPE html>
 
 <html class="light" lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="<%=request.getContextPath()%>/css/stitch.css?v=2026-11-25-admin-r3" rel="stylesheet"/><link href="<%=request.getContextPath()%>/css/stitch-bridge.css?v=2026-11-25-admin-r3" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased arena-loading" data-arena-page="match"><div aria-busy="true" aria-label="Cargando datos del torneo" id="arena-skeleton">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="<%=request.getContextPath()%>/css/stitch.css?v=2026-11-26-tactics-r5" rel="stylesheet"/><link href="<%=request.getContextPath()%>/css/stitch-bridge.css?v=2026-11-26-tactics-r5" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased arena-loading" data-arena-page="match"><div aria-busy="true" aria-label="Cargando datos del torneo" id="arena-skeleton">
 <div class="ske-nav"><div class="ske-block" style="width:160px;height:28px"></div><div class="ske-block" style="width:300px;height:16px"></div><div class="ske-block" style="width:120px;height:25px"></div></div>
 <div class="ske-hero"><div><div class="ske-block" style="width:110px;height:14px"></div><div class="ske-block" style="width:80%;height:52px"></div><div class="ske-block" style="width:66%;height:18px"></div><div class="ske-block" style="width:73%;height:18px"></div><div class="ske-block" style="width:45%;height:35px"></div></div><div class="ske-block ske-cover"></div></div>
 <div class="ske-cards"><div class="ske-block"></div><div class="ske-block"></div><div class="ske-block"></div><div class="ske-block"></div></div>
@@ -101,15 +101,15 @@
 <!-- Control Header & Playback Strip -->
 <div class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
 <div class="flex items-center gap-space-xs">
-<button class="px-space-md py-space-xs rounded bg-primary text-on-primary font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-primary-container transition-all active:scale-95 shadow-sm" id="btn-play" type="button">
+<button class="px-space-md py-space-xs rounded bg-primary text-on-primary font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-primary-container transition-all active:scale-95 shadow-sm" id="btn-play" type="button" aria-label="Reproducir el partido">
 <span class="material-symbols-outlined text-[16px]">play_arrow</span>
 <span id="btn-play-label">Reproducir</span>
 </button>
-<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-pause" type="button">
+<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-pause" type="button" aria-label="Pausar el partido">
 <span class="material-symbols-outlined text-[16px]">pause</span>
 <span>Pausar</span>
 </button>
-<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-reset" type="button">
+<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-reset" type="button" aria-label="Reiniciar el partido">
 <span class="material-symbols-outlined text-[16px]">restart_alt</span>
 <span>Reiniciar</span>
 </button>
@@ -134,51 +134,22 @@
 </div>
 <div class="flex items-center gap-3">
 <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary"></span> Gol</span>
-<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Tarjeta</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Descanso</span>
 <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-surface-container-highest"></span> Cambio</span>
 <span>90:00' Final</span>
 </div>
 </div>
 <!-- Progress Track -->
-<div class="relative w-full h-3 bg-surface-container rounded-full overflow-hidden cursor-pointer" id="progress-track">
+<div class="relative w-full h-3 bg-surface-container rounded-full overflow-hidden cursor-pointer" id="progress-track" role="slider" tabindex="0" aria-label="Buscar minuto del partido" aria-valuemin="0" aria-valuemax="90" aria-valuenow="0" aria-valuetext="Minuto 0 de 90">
 <div class="h-full bg-secondary transition-all duration-100 ease-linear" id="sim-progress-bar" style="width: 0%;"></div>
 </div>
-<!-- Markers Over Progress -->
-<div class="relative w-full h-4 mt-1 font-label-sm text-label-sm">
-<!-- 18m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="18" style="left: 20%;" title="18' Gol SAP" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 34m Goal LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="34" style="left: 37.7%;" title="34' Gol LDA" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 42m Yellow LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-on-secondary-fixed-variant text-secondary-fixed flex items-center justify-center hover:scale-125 transition-transform" data-minute="42" style="left: 46.6%;" title="42' Amarilla LDA" type="button">
-<span class="text-[9px] font-bold">Y</span>
-</button>
-<!-- 45m HT -->
-<div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left: 50%;"></div>
-<!-- 63m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="63" style="left: 70%;" title="63' Gol SAP" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 71m Goal LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="71" style="left: 78.8%;" title="71' Gol LDA" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 74m Sub SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center hover:scale-125 transition-transform" data-minute="74" style="left: 82.2%;" title="74' Sustitución" type="button">
-<span class="material-symbols-outlined text-[10px]">sync</span>
-</button>
-<!-- 90+2m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="90" style="left: 98%;" title="90+2' Gol SAP Ganador" type="button">
-<span class="material-symbols-outlined text-[10px]">star</span>
-</button>
+<!-- Los botones de gol y cambio se rellenan desde el reporte guardado, sin ejemplos ficticios. -->
+<div class="relative w-full h-4 mt-1 font-label-sm text-label-sm" id="arena-event-markers">
+  <div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left:50%" aria-hidden="true"></div>
 </div>
 </div>
 <!-- 2D Tactical Soccer Pitch Schematics -->
-<div class="relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none">
+<div id="arena-pitch" class="arena-pitch-field relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none" aria-label="Representación táctica ilustrativa con once jugadores por equipo, pases, tiros y balón">
 <!-- Pitch Grass Lines SVG -->
 <svg class="absolute inset-0 w-full h-full opacity-30 text-surface" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 1000 600">
 <!-- Outer Line -->
@@ -212,8 +183,8 @@
 <div class="absolute right-1/6 bottom-1/3 w-80 h-52 rounded-full bg-secondary/30 blur-3xl"></div>
 </div>
 <!-- Team Labels on Field -->
-<div class="absolute left-6 top-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase">Saprissa (Local)</div>
-<div class="absolute right-6 bottom-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase">Alajuelense (Visita)</div>
+<div class="absolute left-6 top-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase" data-pitch-home>Saprissa (Local)</div>
+<div class="absolute right-6 bottom-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase" data-pitch-away>Alajuelense (Visita)</div>
 <!-- Dynamic Ball Node -->
 <div class="absolute w-6 h-6 rounded-full bg-surface shadow-[0_0_15px_rgba(255,255,255,0.9)] flex items-center justify-center transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 z-20" id="ball-actor" style="left: 50%; top: 50%;">
 <div class="w-3 h-3 rounded-full bg-primary flex items-center justify-center">
@@ -475,4 +446,4 @@
 </footer>
 </div>
 <!-- Simulation Script Logic -->
-</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-25-admin-r3"></script></body></html>
+</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer src="<%=request.getContextPath()%>/js/arena-pitch.js?v=2026-11-26-tactics-r5"></script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-26-tactics-r5"></script></body></html>
