@@ -981,3 +981,107 @@ html.dark footer {
 @media (prefers-reduced-motion: reduce) {
   .arena-pitch-player, .arena-pitch-ball { transition: none !important; }
 }
+
+/* ETAPA 2 — pulido: progreso, acceso al partido en vivo, controles
+   accesibles y seguimiento del encuentro desde un enlace directo. */
+.arena-bracket-focus {
+  outline: 3px solid #e58a0c !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(229,138,12,.15) !important;
+  scroll-margin: 148px 12px 24px;
+}
+@media (max-width: 767px) {
+  body[data-arena-page="bracket"] .arena-desktop-bracket-filters,
+  body[data-arena-page="bracket"] .arena-desktop-zoom { display: none !important; }
+  body[data-arena-page="bracket"] .arena-bracket-controls {
+    gap: .6rem; padding: .7rem 12px;
+  }
+  body[data-arena-page="bracket"] .arena-bracket-search {
+    width: 100%; min-width: 0; flex: 1 1 100%;
+  }
+  body[data-arena-page="bracket"] .arena-bracket-search input {
+    width: 100%; min-width: 0;
+  }
+  body[data-arena-page="bracket"] #toggle-scores {
+    min-height: 40px; font-size: .71rem;
+  }
+  body[data-arena-page="bracket"] .arena-mobile-bracket {
+    padding-top: .7rem; padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+  .arena-mobile-progress {
+    display: grid; grid-template-columns: minmax(0,1fr) auto;
+    align-items: center; gap: .45rem; padding: .78rem .9rem;
+    margin-bottom: .75rem;
+    border-radius: 11px; border: 1px solid var(--color-outline-variant,#ddd);
+    background: var(--color-surface,#fff); color: var(--color-on-surface,#1a1a1a);
+    font-size: .72rem;
+  }
+  .arena-mobile-progress strong { font-variant-numeric: tabular-nums; font-weight: 800; }
+  .arena-mobile-progress-track {
+    grid-column: 1 / -1; height: 6px; border-radius: 999px;
+    background: var(--color-surface-container,#ddd); overflow: hidden;
+  }
+  .arena-mobile-progress-track > div {
+    height: 100%; border-radius: inherit; background: #d97706;
+    transition: width .25s ease;
+  }
+  .arena-mobile-live-jump {
+    width: 100%; display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: .5rem;
+    text-align: left; padding: .82rem .9rem; min-height: 52px;
+    border: 1px solid #d97706; border-radius: 11px;
+    background: #fff1d6; color: #713b05; margin-bottom: .8rem;
+    font-size: .74rem; line-height: 1.4;
+  }
+  .arena-mobile-live-jump > span {
+    min-width: 0; flex: 1 1 165px; overflow-wrap: anywhere; font-weight: 700;
+  }
+  .arena-mobile-live-jump strong { flex-shrink: 0; font-size: .7rem; }
+  .arena-mobile-rounds { gap: 6px; }
+  .arena-mobile-round {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; min-height: 53px;
+    padding: .52rem .15rem; line-height: 1.15; cursor: pointer;
+    font-size: clamp(.59rem, 2.5vw, .74rem);
+  }
+  .arena-mobile-round small { font-size: .62rem; font-weight: 700; opacity: .86; }
+  .arena-mobile-round:focus-visible,
+  .arena-mobile-pager button:focus-visible,
+  .arena-mobile-live-jump:focus-visible {
+    outline: 3px solid #d97706; outline-offset: 2px;
+  }
+  .arena-mobile-match {
+    min-height: 148px; transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .arena-mobile-match[data-focused="true"] {
+    border: 2px solid #d97706;
+    box-shadow: 0 0 0 3px rgba(217,119,6,.16);
+  }
+  .arena-mobile-match[data-live="true"] .arena-mobile-status {
+    font-weight: 900; white-space: nowrap;
+  }
+  .arena-mobile-pager {
+    display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: .55rem; margin-top: .95rem;
+  }
+  .arena-mobile-pager button {
+    min-height: 44px; border: 1px solid var(--color-outline-variant,#ccc);
+    border-radius: 10px; font-weight: 800; font-size: .74rem;
+    background: var(--color-surface,#fff); color: var(--color-on-surface,#1a1a1a);
+  }
+  .arena-mobile-pager button:disabled { opacity: .35; cursor: not-allowed; }
+  .arena-mobile-empty-results {
+    padding: 1.15rem; border-radius: 11px;
+    background: var(--color-surface-container-low,#f6f6f6);
+    color: var(--color-on-surface-variant,#555);
+    font-size: .83rem; text-align: center;
+  }
+  #match-drawer {
+    height: 100dvh; max-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .arena-mobile-progress-track > div,
+  .arena-mobile-match { transition: none !important; }
+}
