@@ -491,6 +491,98 @@
       bottom.forEach((el) => (el.textContent = "SIN SISTEMA DE SANCIONES"));
     }
   }
+  // ETAPA 2: ronda seleccionable en móvil, escritorio conserva las siete columnas.
+  let mobileRoundChoice = null;
+  let mobileFocusHandled = false;
+  function renderMobileBracket(d) {
+    const viewport = $("#bracket-viewport");
+    if (!viewport || !d?.tournament) return;
+    let mobile = $("#arena-mobile-bracket");
+    if (!mobile) {
+      mobile = document.createElement("section");
+      mobile.id = "arena-mobile-bracket";
+      mobile.className = "arena-mobile-bracket";
+      mobile.setAttribute("aria-label", "Cuadro del torneo por rondas");
+      viewport.parentNode.insertBefore(mobile, viewport);
+      mobile.addEventListener("click", (event) => {
+        const tab = event.target.closest("[data-mobile-round]");
+        if (tab) {
+          mobileRoundChoice = Number(tab.dataset.mobileRound);
+          renderMobileBracket(state.data);
+          return;
+        }
+        const button = event.target.closest("[data-mobile-match]");
+        if (button) {
+          const match = state.data?.matches.find(
+            (m) => m.id === Number(button.dataset.mobileMatch));
+          if (!match) return;
+          const card = $('[data-real-match-id="' + match.id + '"]', $("#bracket-stage")) ||
+            { dataset: { winner: match.done ? (match.winnerId === match.aId ?
+              match.aName : match.bName) : "Por definir" } };
+          openMatchDrawer(match, card);
+        }
+      });
+    }
+    const focusMatchId = Number(new URLSearchParams(location.search).get("focusMatch"));
+    const focus = d.matches.find((m) => m.id === focusMatchId);
+    const live = d.matches.find((m) => m.live);
+    if (!mobileRoundChoice) {
+      mobileRoundChoice = focus?.round || live?.round ||
+        d.matches.find((m) => m.ready && !m.done)?.round || 1;
+    }
+    const titles = ["", "Octavos", "Cuartos", "Semifinales", "Final"];
+    const games = d.matches.filter((m) => m.round === mobileRoundChoice)
+      .sort((a, b) => a.position - b.position);
+    const search = ($("#bracket-search")?.value || "").trim().toLocaleLowerCase("es");
+    const filtered = games.filter((m) => !search ||
+      (m.aName || "").toLocaleLowerCase("es").includes(search) ||
+      (m.bName || "").toLocaleLowerCase("es").includes(search));
+    const teamRow = (m, side) => {
+      const home = side === "A";
+      const name = (home ? m.aName : m.bName) || "Por definir";
+      const teamId = home ? m.aId : m.bId;
+      const score = home ? m.scoreA : m.scoreB;
+      return '<div class="arena-mobile-team" data-winner="' +
+        String(!!m.done && m.winnerId === teamId) + '">' +
+        '<span class="arena-mobile-crest">' + esc(short(name)) + '</span>' +
+        '<span class="arena-mobile-team-name">' + esc(name) + '</span>' +
+        '<span class="arena-mobile-result">' +
+        esc(m.done || m.live ? (score ?? 0) : "—") + '</span></div>';
+    };
+    mobile.innerHTML =
+      '<div class="arena-mobile-rounds" role="tablist" aria-label="Fase del torneo">' +
+      titles.slice(1).map((label, index) => {
+        const round = index + 1;
+        return '<button type="button" role="tab" class="arena-mobile-round" data-mobile-round="' +
+          round + '" aria-selected="' + (mobileRoundChoice === round) + '">' +
+          label + '</button>';
+      }).join("") + '</div>' +
+      '<div class="arena-mobile-round-title"><span>' + titles[mobileRoundChoice] +
+      '</span><span>' + filtered.length + ' partidos</span></div>' +
+      '<div class="arena-mobile-match-list" role="tabpanel">' +
+      (filtered.length ? filtered.map((m) =>
+        '<button type="button" class="arena-mobile-match" data-mobile-match="' + m.id +
+        '" data-live="' + !!m.live + '">' +
+        '<div class="arena-mobile-match-top"><span>Partido ' + m.position +
+        '</span><span class="arena-mobile-status">' +
+        (m.live ? "● EN VIVO" : m.done ? "Finalizado" : m.ready ? "Listo" : "Pendiente") +
+        '</span></div>' + teamRow(m, "A") + teamRow(m, "B") +
+        '<div class="arena-mobile-match-bottom"><span>' +
+        (m.done ? "Resultado definitivo" : m.live ? "Marcador en directo" : "Por disputar") +
+        '</span><span class="arena-mobile-detail">Ver detalle</span></div></button>'
+      ).join("") : '<p class="arena-empty-state">No hay partidos de esta ronda con ese filtro.</p>') +
+      '</div>';
+    if (focus && !mobileFocusHandled) {
+      mobileFocusHandled = true;
+      window.requestAnimationFrame?.(() => {
+        if (window.matchMedia?.("(max-width: 767px)").matches) {
+          const target = mobile.querySelector('[data-mobile-match="' + focus.id + '"]');
+          target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    }
+  }
+
   /** Dibuja las 15 posiciones y resultados del cuadro eliminatorio. */
   function drawBracket(d) {
     const main = $("main"),
@@ -617,6 +709,7 @@
         });
       });
     }
+    renderMobileBracket(d);
     let zoom = 1;
     const zoomLabel = $("#zoom-level");
     const doZoom = (n) => {
@@ -654,6 +747,7 @@
         ),
       );
       $("#clear-search")?.classList.toggle("hidden", !q);
+      renderMobileBracket(state.data);
     });
     $("#clear-search")?.addEventListener("click", () => {
       input.value = "";
@@ -1066,7 +1160,7 @@
     }
     const main = $("main");
     if (m.live && d.live?.phase === "PLAYING") {
-      main.innerHTML = '<section class="max-w-4xl mx-auto py-12 px-margin"><h1 class="font-headline-xl text-headline-xl">PARTIDO EN VIVO</h1><p class="mt-3">El marcador y las estadísticas se actualizan automáticamente. El resultado definitivo se guardará al terminar el minuto 90 virtual.</p><a class="arena-action mt-4" href="' + go("cuadro") + '">Ver cuadro completo</a></section>';
+      location.replace(go("cuadro", "&focusMatch=" + m.id));
       return;
     }
     if (!m.done || !m.report) {
@@ -1477,8 +1571,8 @@
       metric("Córners", total("cornersA"), total("cornersB")) +
       '</div><div class="arena-live-events">' +
       (events || 'Aún no hay goles ni sustituciones.') +
-      '</div><p class="mt-2"><a href="' + go("partido", "&id=" + match.id) +
-      '">Ver pantalla del partido</a> · Datos simulados</p>';
+      '</div><p class="mt-2"><a href="' + go("cuadro", "&focusMatch=" + match.id) +
+      '">Ver en el cuadro completo</a> · Datos simulados</p>';
   }
 
   /**
@@ -1527,6 +1621,7 @@
             match.ready ? "LISTO" : "PENDIENTE");
       }
     }
+    renderMobileBracket(d);
   }
 
   /** Consulta periódicamente y sincroniza a todos los espectadores sin recargar. */
