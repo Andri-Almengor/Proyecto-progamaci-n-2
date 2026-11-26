@@ -1,95 +1,195 @@
-/* BracketArena — replay táctico 2D (solo visual).
- * Los resultados y eventos reales del torneo vienen de /arena-data;
- * las posiciones ilustrativas NO se guardan en MySQL ni representan tracking real.
+/* BracketArena — simulación táctica 2D, sin motor de físicas externo.
+ * Reproduce movimiento ilustrativo de 22 jugadores, pases, presión y disparos.
+ * SOLO los eventos GOL de /arena-data se muestran como anotaciones reales del torneo.
+ * No modifica el resultado, las estadísticas guardadas ni la base de datos.
  */
 (() => {
   "use strict";
 
   const FORMATION = [
-    [8, 50],   // portero
-    [24, 16], [21, 38], [21, 62], [24, 84], // defensas
-    [41, 25], [38, 50], [41, 75],           // mediocampo
-    [61, 20], [64, 50], [61, 80]            // delanteros
+    [8, 50],                                     // portero
+    [23, 17], [20, 39], [20, 61], [23, 83],     // cuatro defensas
+    [39, 24], [38, 50], [39, 76],               // tres mediocampistas
+    [60, 20], [63, 50], [60, 80]                // tres delanteros
   ];
   const NUMBERS = [1, 2, 4, 5, 3, 6, 8, 10, 7, 9, 11];
-  const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const mix = (a, b, t) => a + (b - a) * t;
+  const smooth = (t) => t * t * (3 - 2 * t);
   const wave = (n) => Math.sin(n * 1.33) * Math.cos(n * .71);
+  const num = (n, fallback = 0) => Number.isFinite(Number(n)) ? Number(n) : fallback;
 
-  /** Fotograma determinista para permitir pausa, reinicio y salto sin aleatoriedad visual. */
-  function frame(minute, seed, events) {
-    const time = clamp(Math.floor(Number(minute) || 0), 0, 90);
-    const id = Number(seed) || 1;
-    const goals = (Array.isArray(events) ? events : []).filter(
-      (e) => e.type === "GOL" && Number(e.minute) === time);
-    const goal = goals[0];
-    const side = goal?.side === "A" || goal?.side === "B"
-      ? goal.side : (Math.floor((time + id % 5) / 6) % 2 === 0 ? "A" : "B");
-    const attack = (time % 12) / 12;
+  function goalAt(minute, events) {
+    return (Array.isArray(events) ? events : []).find((e) =>
+      e.type === "GOL" && Number(e.minute) === minute &&
+      (e.side === "A" || e.side === "B"));
+  }
+
+  function possession(minute, seed, events) {
+    const goal = goalAt(minute, events);
+    if (goal) return goal.side;
+    if (minute <= 0) return "A";
+    if (minute === 46) return "B";
+    const block = Math.floor((minute + seed % 7) / 4);
+    return (block + Math.floor(block / 3) + seed % 2) % 2 ? "B" : "A";
+  }
+
+  /** Fotograma de referencia de un minuto virtual. El gol solo ocurre si existe en MySQL. */
+  function pose(minute, seed, events) {
+    const id = Math.abs(Math.floor(num(seed, 1))) || 1;
+    const time = clamp(Math.floor(num(minute)), 0, 90);
+    const goal = goalAt(time, events);
+    const side = possession(time, id, events);
+    const previous = time > 0 ? possession(time - 1, id, events) : side;
+    const recovered = previous !== side;
+    const attackingA = side === "A";
+    const direction = attackingA ? 1 : -1;
+    const phase = (time % 12) / 12;
     const players = [];
+
+    // Toda la formación avanza o retrocede como un bloque: no hay 22 recorridos aleatorios.
     for (let team = 0; team < 2; team++) {
       const home = team === 0;
-      const hasBall = (home ? "A" : "B") === side;
+      const ownsBall = home === attackingA;
       for (let i = 0; i < FORMATION.length; i++) {
         const [originX, originY] = FORMATION[i];
-        const direction = home ? 1 : -1;
-        const centerShift = i === 0 ? 0 : (hasBall ? 5 + attack * 10 : -5 + attack * 3);
-        const jitterX = i === 0 ? 0 : wave(time * .49 + i * 2.1 + id) * 3.4;
-        const jitterY = i === 0 ? 0 : wave(time * .57 + i * 1.31 + id) * 5.2;
+        const dir = home ? 1 : -1;
+        const advance = i === 0 ? 0 : ownsBall ? 4 + phase * 8 : -3 + phase * 2;
+        const variationX = i === 0 ? 0 : wave(time * .43 + i * 1.73 + id * .1) * 2.6;
+        const variationY = i === 0 ? 0 : wave(time * .51 + i * 1.31 + id * .13) * 4;
         players.push({
           team: home ? "A" : "B", number: NUMBERS[i],
           goalkeeper: i === 0,
-          x: clamp((home ? originX : 100 - originX) + direction * centerShift + jitterX, 5, 95),
-          y: clamp(originY + jitterY, 8, 92)
+          x: clamp((home ? originX : 100 - originX) + dir * advance + variationX,
+            i === 0 ? (home ? 5 : 89) : 5,
+            i === 0 ? (home ? 11 : 95) : 95),
+          y: clamp(originY + variationY, 8, 92)
         });
       }
     }
-    // Posesión que pasa entre mediocampistas y delanteros, sin teletransportes.
-    const slot = [5, 6, 7, 8, 9, 10][(time + id) % 6];
-    let carrier = (side === "A" ? 0 : 11) + slot;
-    let action = "CIRCULACIÓN DE BALÓN";
-    let detail = "Pases y movimientos de apoyo";
+
+    const rotation = [5, 7, 6, 8, 9, 10, 7, 5, 9, 6];
+    let index = rotation[(time + id) % rotation.length];
+    let carrier = (attackingA ? 0 : 11) + index;
+    let action = "PASE Y APOYO";
+    let detail = "Circulación y desmarque entre líneas";
     if (time === 0 || time === 46) {
-      carrier = side === "A" ? 6 : 17;
+      index = 6;
+      carrier = (attackingA ? 0 : 11) + index;
       action = "SAQUE DE CENTRO";
-      detail = "Comienza la posesión";
-    } else if (time === 45) {
-      action = "DESCANSO"; detail = "Finalizó la primera mitad";
-    } else if (time === 90) {
-      action = "FINAL DEL PARTIDO"; detail = "Resultado del torneo";
-    } else if (time % 7 === 0) {
-      action = "PRESIÓN ALTA"; detail = "Recuperación y avance de líneas";
-    } else if (time % 5 === 0) {
-      action = "CONTRAATAQUE"; detail = "Salida rápida por las bandas";
-    } else if (time % 3 === 0) {
-      action = "JUEGO POR BANDA"; detail = "Desmarque y pase al espacio";
-    }
-    if (time % 11 === 0 && time > 0 && time < 90) {
-      action = "LLEGADA AL ÁREA"; detail = "Ataque cerca de la portería";
-      carrier = (side === "A" ? 0 : 11) + 9;
-      players[carrier].x = side === "A" ? 84 : 16;
+      detail = "Comienza la jugada desde la mitad de cancha";
+      players[carrier].x = 50 + (attackingA ? -3 : 3);
       players[carrier].y = 50;
-    }
-    let ball = {
-      x: clamp(players[carrier].x + (side === "A" ? 3.2 : -3.2), 3, 97),
-      y: clamp(players[carrier].y + wave(time + id) * 3, 5, 95)
-    };
-    if (goal) {
-      carrier = (side === "A" ? 0 : 11) + 9;
-      players[carrier].x = side === "A" ? 88 : 12;
-      players[carrier].y = 50;
-      ball = { x: side === "A" ? 97 : 3, y: 50 };
+    } else if (goal) {
+      index = 9;
+      carrier = (attackingA ? 0 : 11) + index;
       action = "¡GOL!";
-      detail = "Anotación registrada en el minuto " + time;
+      detail = "Gol registrado en el minuto " + time;
+      players[carrier].x = attackingA ? 86 : 14;
+      players[carrier].y = 50;
+      // Los jugadores ofensivos se acercan al rematador para celebrar.
+      [8, 10].forEach((p, pos) => {
+        const mate = players[(attackingA ? 0 : 11) + p];
+        mate.x = attackingA ? 78 + pos * 5 : 22 - pos * 5;
+        mate.y = pos ? 61 : 39;
+      });
+    } else if (time === 45) {
+      action = "DESCANSO"; detail = "Final de la primera parte";
+    } else if (time === 90) {
+      action = "FINAL DEL PARTIDO"; detail = "Replay terminado";
+    } else if (recovered) {
+      action = "RECUPERACIÓN"; detail = "Presión defensiva y recuperación del balón";
+    } else if (time % 13 === 0) {
+      action = "DISPARO A PORTERÍA"; detail = "Remate ilustrativo sin modificar el marcador";
+      index = 9;
+      carrier = (attackingA ? 0 : 11) + index;
+      players[carrier].x = attackingA ? 80 : 20;
+      players[carrier].y = 50;
+    } else if (time % 7 === 0) {
+      action = "PRESIÓN ALTA"; detail = "Los defensores cierran espacios";
+    } else if (time % 5 === 0) {
+      action = "CONTRAATAQUE"; detail = "Transición rápida al espacio";
+    } else if (time % 3 === 0) {
+      action = "DESMARQUE"; detail = "Un atacante busca una línea de pase";
     }
-    return { minute: time, side, players, carrier, ball, action, detail, goal: !!goal };
+
+    // Seguimiento al poseedor: dos defensores se aproximan, el resto cubre.
+    if (!goal && time !== 45 && time !== 90) {
+      const defenderBase = attackingA ? 11 : 0;
+      for (const [indexDef, amount] of [[6, .35], [2, .19]]) {
+        const defender = players[defenderBase + indexDef];
+        const target = players[carrier];
+        defender.x = clamp(mix(defender.x, target.x, amount), 5, 95);
+        defender.y = clamp(mix(defender.y, target.y, amount), 8, 92);
+      }
+      // El compañero de ataque corre hacia espacio libre, sin seguir el balón.
+      const runner = players[(attackingA ? 0 : 11) + ((index + 2) % 6 + 5)];
+      runner.x = clamp(runner.x + direction * 4, 5, 95);
+      runner.y = clamp(runner.y + wave(time + id) * 3, 8, 92);
+    }
+
+    const ball = goal ? { x: attackingA ? 97 : 3, y: 50 } : {
+      x: clamp(players[carrier].x + direction * 2.7, 3, 97),
+      y: clamp(players[carrier].y + wave(time + id) * 1.8, 5, 95)
+    };
+    return {
+      minute: time, side, players, carrier, ball,
+      action, detail, goal: !!goal, recovered,
+      eventPlayer: goal?.player || null
+    };
   }
 
-  /** Monta 22 fichas numeradas + balón sobre la cancha ya dibujada en JSP. */
+  /** Interpolación determinista. Los pases y tiros viajan, no se teletransportan. */
+  function frame(minute, seed, events) {
+    const time = clamp(num(minute), 0, 90);
+    const index = Math.floor(time);
+    const fraction = time - index;
+    const from = pose(index, seed, events);
+    if (fraction < .000001 || index === 90)
+      return { ...from, progress: 0, fromBall: from.ball, toBall: from.ball };
+
+    const next = pose(Math.min(index + 1, 90), seed, events);
+    const eased = smooth(fraction);
+    const players = from.players.map((p, i) => ({
+      ...p, x: mix(p.x, next.players[i].x, eased),
+      y: mix(p.y, next.players[i].y, eased)
+    }));
+    // Pequeña parábola para distinguir pases y centros de un balón conducido.
+    const arc = (from.carrier === next.carrier && from.side === next.side) ?
+      1.1 : 4.3;
+    const ball = {
+      x: clamp(mix(from.ball.x, next.ball.x, eased), 3, 97),
+      y: clamp(mix(from.ball.y, next.ball.y, eased) -
+        Math.sin(Math.PI * fraction) * arc, 5, 95)
+    };
+    let action = from.action;
+    let detail = from.detail;
+    if (next.goal) {
+      action = "DISPARO A PUERTA";
+      detail = "Balón en trayectoria hacia el arco";
+    } else if (from.goal) {
+      action = "CELEBRACIÓN";
+      detail = "Los compañeros festejan el gol registrado";
+    } else if (next.side !== from.side) {
+      action = "DISPUTA DEL BALÓN";
+      detail = "El equipo rival intenta recuperar la posesión";
+    } else if (from.action !== "DESCANSO" && from.action !== "FINAL DEL PARTIDO" &&
+        fraction > .15) {
+      action = "PASE EN MOVIMIENTO";
+      detail = "Pase al compañero que se desmarca";
+    }
+    return {
+      ...from, minute: time, players, ball, action, detail,
+      progress: fraction, fromBall: from.ball, toBall: next.ball
+    };
+  }
+
   function create(field, options) {
     if (!field) return null;
     const config = options || {};
     const home = String(config.home || "Local");
     const away = String(config.away || "Visita");
+    const events = Array.isArray(config.events) ? config.events : [];
     const layer = document.createElement("div");
     layer.className = "arena-pitch-player-layer";
     layer.setAttribute("aria-hidden", "true");
@@ -101,7 +201,7 @@
       player.dataset.goalkeeper = String(i % 11 === 0);
       player.textContent = String(NUMBERS[i % 11]);
       player.title = (i < 11 ? home : away) +
-        " · Jugador #" + NUMBERS[i % 11] + " (posición simulada)";
+        " · Jugador #" + NUMBERS[i % 11] + " (posición ilustrativa)";
       layer.appendChild(player);
       elements.push(player);
     }
@@ -123,42 +223,54 @@
     const awayLabel = field.querySelector("[data-pitch-away]");
     if (homeLabel) homeLabel.textContent = home + " (LOCAL)";
     if (awayLabel) awayLabel.textContent = away + " (VISITA)";
-    let previousBall = null;
+    const overlay = document.createElement("div");
+    overlay.className = "arena-pitch-moment";
+    overlay.setAttribute("aria-hidden", "true");
+    field.appendChild(overlay);
     let previousMinute = null;
-    const events = Array.isArray(config.events) ? config.events : [];
 
     function update(minute, speed) {
       const current = frame(minute, config.id, events);
-      const duration = clamp(Math.round(390 / (Number(speed) || 1)), 100, 440);
+      const fractional = current.progress > .000001;
+      const transition = previousMinute == null || fractional ? "0ms" :
+        clamp(Math.round(160 / (Number(speed) || 1)), 50, 200) + "ms";
       for (let i = 0; i < elements.length; i++) {
         const player = elements[i];
         const position = current.players[i];
-        player.style.left = position.x + "%";
-        player.style.top = position.y + "%";
-        player.style.transitionDuration = duration + "ms";
+        player.style.left = position.x.toFixed(3) + "%";
+        player.style.top = position.y.toFixed(3) + "%";
+        player.style.transitionDuration = transition;
         player.dataset.active = String(i === current.carrier);
       }
       if (ballNode) {
-        ballNode.style.left = current.ball.x + "%";
-        ballNode.style.top = current.ball.y + "%";
-        ballNode.style.transitionDuration = duration + "ms";
+        ballNode.style.left = current.ball.x.toFixed(3) + "%";
+        ballNode.style.top = current.ball.y.toFixed(3) + "%";
+        ballNode.style.transitionDuration = transition;
+        ballNode.dataset.flight = String(fractional &&
+          (Math.abs(current.toBall.x - current.fromBall.x) > 7 ||
+           Math.abs(current.toBall.y - current.fromBall.y) > 8));
       }
       if (trail) {
-        const from = previousBall && previousMinute !== null &&
-          Math.abs(previousMinute - current.minute) === 1
-          ? previousBall : current.ball;
         trail.setAttribute("points",
-          (from.x * 10).toFixed(0) + "," + (from.y * 6).toFixed(0) + " " +
-          (current.ball.x * 10).toFixed(0) + "," + (current.ball.y * 6).toFixed(0));
+          (current.fromBall.x * 10).toFixed(0) + "," +
+          (current.fromBall.y * 6).toFixed(0) + " " +
+          (current.ball.x * 10).toFixed(0) + "," +
+          (current.ball.y * 6).toFixed(0));
       }
       if (title) title.textContent = "ESTADO: " + current.action;
       if (subtitle) subtitle.textContent = current.detail;
-      field.dataset.tacticalMinute = String(current.minute);
-      previousBall = current.ball;
+      field.dataset.tacticalMinute = String(Math.floor(current.minute));
+      field.dataset.tacticalAction = current.action;
+      field.dataset.possession = current.side;
+      overlay.textContent = current.goal ? "¡GOL! " +
+        (current.side === "A" ? home : away) : "";
+      overlay.dataset.visible = String(current.goal && current.progress < .25);
       previousMinute = current.minute;
       return current;
     }
+
     return { update };
   }
-  window.ArenaPitch = { frame, create };
+
+  window.ArenaPitch = { frame, pose, create };
 })();
