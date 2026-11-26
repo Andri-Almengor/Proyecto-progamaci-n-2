@@ -9,7 +9,7 @@ const script = fs.readFileSync(path.join(root, "web/js/arena-pitch.js"), "utf8")
 const runtime = fs.readFileSync(path.join(root, "web/js/stitch-runtime.js"), "utf8");
 const markup = fs.readFileSync(path.join(root, "web/WEB-INF/views/arena/match.jsp"), "utf8");
 assert.doesNotThrow(() => new vm.Script(script), "Sintaxis del motor 2D");
-assert.doesNotMatch(runtime, /\$\("\.arena-replay-marker", markers\)\.forEach/,
+assert.doesNotMatch(runtime, /(?<!\$)\$\("\.arena-replay-marker", markers\)\.forEach/,
   "Los botones de eventos se recorren con querySelectorAll, no querySelector");
 assert.match(runtime, /\$\$\("\.arena-replay-marker", markers\)\.forEach/);
 assert.match(runtime, /window\.requestAnimationFrame\(animateFrames\)/);
