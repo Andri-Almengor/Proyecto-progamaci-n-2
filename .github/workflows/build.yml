@@ -86,11 +86,14 @@ jobs:
         shell: bash
         run: |
           node --check web/js/stitch-runtime.js
+          node --check web/js/arena-pitch.js
           node scripts/test-stitch-selectors.cjs
+          node scripts/test-mobile-bracket.cjs
+          node scripts/test-pitch.cjs
           test -f web/WEB-INF/views/arena/partials/header.jspf
           ! grep -R -q 'SERVIDORES ONLINE' web/WEB-INF/views/arena/
           grep -q 'arena-nav-current' web/WEB-INF/views/arena/partials/header.jspf
-          grep -q 'data-arena-shell="2026-11-25-admin-r3"' web/WEB-INF/views/arena/partials/header.jspf
+          grep -q 'data-arena-shell="2026-11-25-mobile-r4"' web/WEB-INF/views/arena/partials/header.jspf
           grep -q 'arenaHeaderUser.admin()' web/WEB-INF/views/arena/partials/header.jspf
       - name: Compile, test and package
         env:
@@ -135,9 +138,9 @@ jobs:
           PY
           # HTML servido por la versión correcta (no basta comprobar las fuentes del repo).
           curl -fsS -D /tmp/arena-response-headers.txt "$base?view=inicio" -o /tmp/bracket-home.html
-          grep -qi '^X-Bracket-Arena-UI: 2026-11-25-admin-r3' /tmp/arena-response-headers.txt
-          grep -q 'data-arena-shell="2026-11-25-admin-r3"' /tmp/bracket-home.html
-          grep -q 'stitch-runtime.js?v=2026-11-25-admin-r3' /tmp/bracket-home.html
+          grep -qi '^X-Bracket-Arena-UI: 2026-11-25-mobile-r4' /tmp/arena-response-headers.txt
+          grep -q 'data-arena-shell="2026-11-25-mobile-r4"' /tmp/bracket-home.html
+          grep -q 'stitch-runtime.js?v=2026-11-25-mobile-r4' /tmp/bracket-home.html
           sed -n '/<header /,/<\/header>/p' /tmp/bracket-home.html > /tmp/arena-rendered-header.html
           if grep -Eqi 'DATOS ACTUALIZADOS|SIN INICIAR SESI|SERVIDORES ONLINE|Alex Mercer|<select' /tmp/arena-rendered-header.html; then
             echo 'Se detectó el encabezado antiguo en HTML publicado:'
@@ -205,6 +208,9 @@ jobs:
           grep -q 'Primer Tiempo' /tmp/partido-report.html
           grep -q 'Segundo Tiempo' /tmp/partido-report.html
           grep -q 'Estadísticas Finales' /tmp/partido-report.html
+          grep -q 'id="arena-pitch"' /tmp/partido-report.html
+          grep -q 'id="arena-event-markers"' /tmp/partido-report.html
+          grep -q 'arena-pitch.js?v=2026-11-25-mobile-r4' /tmp/partido-report.html
 
       - name: Smoke-test dynamic JSON endpoint and local Stitch assets
         run: |
@@ -225,8 +231,11 @@ jobs:
           curl -fsS "$base/css/stitch.css" -o /tmp/stitch-css
           grep -q '.bg-surface' /tmp/stitch-css
           curl -fsS "$base/js/stitch-runtime.js" -o /tmp/stitch-js
+          curl -fsS "$base/js/arena-pitch.js" -o /tmp/arena-pitch-js
+          grep -q 'window.ArenaPitch' /tmp/arena-pitch-js
+          grep -q 'renderMobileBracket' /tmp/stitch-js
           grep -q 'arena-loading' /tmp/stitch-home.html
-          grep -q 'src="/BracketArena/js/stitch-runtime.js?v=2026-11-25-admin-r3"' /tmp/stitch-home.html
+          grep -q 'src="/BracketArena/js/stitch-runtime.js?v=2026-11-25-mobile-r4"' /tmp/stitch-home.html
           curl -fsS "$base/app?view=cuadro" -o /tmp/stitch-bracket.html
           grep -q 'bracket-stage' /tmp/stitch-bracket.html
           curl -fsS "$base/app?view=equipos" -o /tmp/stitch-teams.html
