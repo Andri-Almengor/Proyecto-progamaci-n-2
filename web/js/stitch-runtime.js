@@ -1299,6 +1299,35 @@
       b.addEventListener("click", () => chooseHalf(i + 1)),
     );
     chooseHalf(3);
+    // ETAPA 3: 22 jugadores y balón sincronizados con el replay existente.
+    // El posicionamiento es ilustrativo; los goles sí vienen de /arena-data.
+    const pitch = window.ArenaPitch?.create($("#arena-pitch"), {
+      id: m.id, home: m.aName, away: m.bName, events: m.report.events
+    });
+    const markers = $("#arena-event-markers");
+    if (markers) {
+      markers.innerHTML =
+        '<div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left:50%" aria-hidden="true"></div>' +
+        (m.report.events || []).map((event) => {
+          const minute = Math.max(0, Math.min(90, Number(event.minute) || 0));
+          const goal = event.type === "GOL";
+          const label = minute + "' " + (goal ? "Gol" : "Cambio") +
+            " · " + (event.team || "");
+          return '<button type="button" class="arena-replay-marker absolute -top-4 -ml-2 w-4 h-4 rounded-full flex items-center justify-center" ' +
+            'style="left:' + (minute / 90 * 100).toFixed(2) + '%;background:' +
+            (goal ? '#d97706' : '#374151') + ';color:#fff" data-minute="' + minute +
+            '" aria-label="' + esc(label) + '" title="' + esc(label) + '">' +
+            '<span class="material-symbols-outlined text-[11px]">' +
+            (goal ? "sports_soccer" : "sync") + '</span></button>';
+        }).join("");
+      $(".arena-replay-marker", markers).forEach((button) =>
+        button.addEventListener("click", () => {
+          pause();
+          minute = Math.max(0, Math.min(90, Number(button.dataset.minute)));
+          updateClock();
+        })
+      );
+    }
     // Progresión estrictamente visual de 0 a 90, nunca altera la BD.
     let minute = 90,
       timer = null,
@@ -1313,9 +1342,10 @@
         period.textContent =
           minute <= 45 ? "1T" : minute < 90 ? "2T" : "FINALIZADO";
       if (progress) progress.style.width = (minute / 90) * 100 + "%";
-      if (ball) {
-        ball.style.left = `${13 + (Math.sin(minute / 9) * 0.5 + 0.5) * 72}%`;
-        ball.style.top = `${20 + (Math.cos(minute / 5) * 0.5 + 0.5) * 55}%`;
+      if (pitch) pitch.update(minute, speed);
+      else if (ball) {
+        ball.style.left = "50%";
+        ball.style.top = "50%";
       }
       if (scoreA)
         scoreA.textContent = String(
