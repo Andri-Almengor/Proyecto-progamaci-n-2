@@ -113,4 +113,4 @@ La barra superior es compartida por todas las páginas. Los visitantes reciben e
 
 ## Si aún aparece el encabezado viejo en NetBeans/Tomcat
 
-Si ves «VISITANTE», «SIN INICIAR SESIÓN», un avatar ficticio o «DATOS ACTUALIZADOS», tu navegador probablemente está viendo un despliegue anterior. Ejecutá en PowerShell `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue.ps1` y consultá **[docs/DESPLIEGUE_NETBEANS.md](docs/DESPLIEGUE_NETBEANS.md)**. El servidor actual debe devolver la cabecera `X-Bracket-Arena-UI: 2026-11-25-admin-r3`. No es necesario reinstalar MySQL.
+Si ves «VISITANTE», «SIN INICIAR SESIÓN», un avatar ficticio o «DATOS ACTUALIZADOS», tu navegador probablemente está viendo un despliegue anterior. Ejecutá en PowerShell `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verificar-despliegue.ps1` y consultá **[docs/DESPLIEGUE_NETBEANS.md](docs/DESPLIEGUE_NETBEANS.md)**. El servidor actual debe devolver la cabecera `X-Bracket-Arena-UI: 2026-11-25-mobile-r4`. No es necesario reinstalar MySQL.
