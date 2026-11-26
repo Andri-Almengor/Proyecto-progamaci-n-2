@@ -491,12 +491,32 @@
       bottom.forEach((el) => (el.textContent = "SIN SISTEMA DE SANCIONES"));
     }
   }
-  // ETAPA 2: ronda seleccionable en móvil, escritorio conserva las siete columnas.
+  // ETAPA 2 (ampliación): cuadro móvil accesible, búsqueda global y en vivo.
+  // El panorama de escritorio sigue independiente para no alterar su diseño.
   let mobileRoundChoice = null;
   let mobileFocusHandled = false;
+  let desktopFocusHandled = false;
+  let bracketScoresVisible = true;
+  const roundNames = ["", "Octavos", "Cuartos", "Semifinales", "Final"];
+  const searchable = (value) => String(value || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
+
+  function focusBracketOnDesktop(d) {
+    if (desktopFocusHandled || !d?.tournament ||
+        window.matchMedia?.("(max-width: 767px)").matches) return;
+    const id = Number(new URLSearchParams(location.search).get("focusMatch"));
+    if (!id || !d.matches.some((m) => m.id === id)) return;
+    const card = $('[data-real-match-id="' + id + '"]', $("#bracket-stage"));
+    if (!card) return;
+    desktopFocusHandled = true;
+    card.classList.add("arena-bracket-focus");
+    window.requestAnimationFrame?.(() =>
+      card.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "center" }));
+  }
+
   function renderMobileBracket(d) {
     const viewport = $("#bracket-viewport");
-    if (!viewport || !d?.tournament) return;
+    if (!viewport || !d) return;
     let mobile = $("#arena-mobile-bracket");
     if (!mobile) {
       mobile = document.createElement("section");
@@ -504,82 +524,179 @@
       mobile.className = "arena-mobile-bracket";
       mobile.setAttribute("aria-label", "Cuadro del torneo por rondas");
       viewport.parentNode.insertBefore(mobile, viewport);
+
+      const chooseRound = (round, focusTab = false) => {
+        if (!Number.isInteger(round) || round < 1 || round > 4) return;
+        mobileRoundChoice = round;
+        renderMobileBracket(state.data);
+        if (focusTab) mobile.querySelector?.('[data-mobile-round="' + round + '"]')
+          ?.focus?.({ preventScroll: true });
+      };
       mobile.addEventListener("click", (event) => {
         const tab = event.target.closest("[data-mobile-round]");
-        if (tab) {
-          mobileRoundChoice = Number(tab.dataset.mobileRound);
-          renderMobileBracket(state.data);
+        if (tab) { chooseRound(Number(tab.dataset.mobileRound), true); return; }
+        const prevNext = event.target.closest("[data-mobile-step]");
+        if (prevNext) {
+          chooseRound(mobileRoundChoice + Number(prevNext.dataset.mobileStep), true);
+          return;
+        }
+        const goLive = event.target.closest("[data-mobile-live]");
+        if (goLive) {
+          const liveMatch = state.data?.matches.find((m) => m.live) ||
+            state.data?.matches.find((m) => m.id === state.data?.live?.matchId);
+          if (!liveMatch) return;
+          const search = $("#bracket-search");
+          if (search) search.value = "";
+          $("#clear-search")?.classList.add("hidden");
+          chooseRound(liveMatch.round);
+          mobile.querySelector?.('[data-mobile-match="' + liveMatch.id + '"]')
+            ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
           return;
         }
         const button = event.target.closest("[data-mobile-match]");
-        if (button) {
-          const match = state.data?.matches.find(
-            (m) => m.id === Number(button.dataset.mobileMatch));
-          if (!match) return;
-          const card = $('[data-real-match-id="' + match.id + '"]', $("#bracket-stage")) ||
-            { dataset: { winner: match.done ? (match.winnerId === match.aId ?
-              match.aName : match.bName) : "Por definir" } };
-          openMatchDrawer(match, card);
-        }
+        if (!button) return;
+        const match = state.data?.matches.find(
+          (m) => m.id === Number(button.dataset.mobileMatch));
+        if (!match) return;
+        const card = $('[data-real-match-id="' + match.id + '"]', $("#bracket-stage")) ||
+          { dataset: { winner: match.done ? (match.winnerId === match.aId ?
+            match.aName : match.bName) : "Por definir" } };
+        openMatchDrawer(match, card);
+      });
+      mobile.addEventListener("keydown", (event) => {
+        const tab = event.target.closest("[data-mobile-round]");
+        if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const current = Number(tab.dataset.mobileRound);
+        const next = event.key === "Home" ? 1 : event.key === "End" ? 4 :
+          Math.max(1, Math.min(4, current + (event.key === "ArrowRight" ? 1 : -1)));
+        chooseRound(next, true);
       });
     }
-    const focusMatchId = Number(new URLSearchParams(location.search).get("focusMatch"));
-    const focus = d.matches.find((m) => m.id === focusMatchId);
-    const live = d.matches.find((m) => m.live);
-    if (!mobileRoundChoice) {
-      mobileRoundChoice = focus?.round || live?.round ||
-        d.matches.find((m) => m.ready && !m.done)?.round || 1;
+
+    const matches = Array.isArray(d.matches) ? d.matches : [];
+    if (!d.tournament) {
+      const empty = '<div class="arena-mobile-empty">' +
+        note("Todavía no se ha creado el cuadro del torneo. Cuando se registren los 16 equipos participantes, aparecerán las cuatro rondas.", "CUADRO POR DEFINIR") +
+        '</div>';
+      if (mobile.innerHTML !== empty) mobile.innerHTML = empty;
+      return;
     }
-    const titles = ["", "Octavos", "Cuartos", "Semifinales", "Final"];
-    const games = d.matches.filter((m) => m.round === mobileRoundChoice)
-      .sort((a, b) => a.position - b.position);
-    const search = ($("#bracket-search")?.value || "").trim().toLocaleLowerCase("es");
-    const filtered = games.filter((m) => !search ||
-      (m.aName || "").toLocaleLowerCase("es").includes(search) ||
-      (m.bName || "").toLocaleLowerCase("es").includes(search));
-    const teamRow = (m, side) => {
-      const home = side === "A";
-      const name = (home ? m.aName : m.bName) || "Por definir";
-      const teamId = home ? m.aId : m.bId;
-      const score = home ? m.scoreA : m.scoreB;
-      return '<div class="arena-mobile-team" data-winner="' +
-        String(!!m.done && m.winnerId === teamId) + '">' +
+
+    const focusId = Number(new URLSearchParams(location.search).get("focusMatch"));
+    const focus = matches.find((m) => m.id === focusId);
+    const live = matches.find((m) => m.live) ||
+      matches.find((m) => m.id === d.live?.matchId &&
+        d.live?.phase === "PLAYING");
+    if (!mobileRoundChoice) mobileRoundChoice = focus?.round || live?.round ||
+      matches.find((m) => m.ready && !m.done)?.round || 1;
+
+    const query = searchable($("#bracket-search")?.value);
+    const selected = matches.filter((m) => m.round === mobileRoundChoice);
+    // La búsqueda no debe ignorar equipos que aparecen en otra ronda.
+    const results = (query ? matches.filter((m) =>
+      searchable(m.aName).includes(query) || searchable(m.bName).includes(query)
+    ) : selected).sort((x, y) => x.round - y.round || x.position - y.position);
+    const completed = matches.filter((m) => m.done).length;
+    const gamesCount = matches.length || 15;
+    const percent = Math.min(100, Math.round(completed / gamesCount * 100));
+    const row = (m, side) => {
+      const isHome = side === "A";
+      const name = (isHome ? m.aName : m.bName) || "Por definir";
+      const teamId = isHome ? m.aId : m.bId;
+      const winner = !!m.done && teamId != null && m.winnerId === teamId;
+      const score = isHome ? m.scoreA : m.scoreB;
+      const visibleScore = bracketScoresVisible && (m.done || m.live);
+      return '<div class="arena-mobile-team" data-winner="' + winner + '">' +
         '<span class="arena-mobile-crest">' + esc(short(name)) + '</span>' +
         '<span class="arena-mobile-team-name">' + esc(name) + '</span>' +
         '<span class="arena-mobile-result">' +
-        esc(m.done || m.live ? (score ?? 0) : "—") + '</span></div>';
+        esc(visibleScore ? (score ?? 0) : "—") + '</span></div>';
     };
-    mobile.innerHTML =
-      '<div class="arena-mobile-rounds" role="tablist" aria-label="Fase del torneo">' +
-      titles.slice(1).map((label, index) => {
-        const round = index + 1;
-        return '<button type="button" role="tab" class="arena-mobile-round" data-mobile-round="' +
-          round + '" aria-selected="' + (mobileRoundChoice === round) + '">' +
-          label + '</button>';
-      }).join("") + '</div>' +
-      '<div class="arena-mobile-round-title"><span>' + titles[mobileRoundChoice] +
-      '</span><span>' + filtered.length + ' partidos</span></div>' +
-      '<div class="arena-mobile-match-list" role="tabpanel">' +
-      (filtered.length ? filtered.map((m) =>
-        '<button type="button" class="arena-mobile-match" data-mobile-match="' + m.id +
-        '" data-live="' + !!m.live + '">' +
-        '<div class="arena-mobile-match-top"><span>Partido ' + m.position +
-        '</span><span class="arena-mobile-status">' +
-        (m.live ? "● EN VIVO" : m.done ? "Finalizado" : m.ready ? "Listo" : "Pendiente") +
-        '</span></div>' + teamRow(m, "A") + teamRow(m, "B") +
+    const card = (m) => {
+      const playing = !!m.live || (d.live?.phase === "PLAYING" && d.live.matchId === m.id);
+      const status = playing ? "● EN VIVO" : m.done ? "FINALIZADO" :
+        m.ready ? "LISTO" : "PENDIENTE";
+      const scoresText = bracketScoresVisible && (m.done || playing) ?
+        " · " + (m.scoreA ?? 0) + " a " + (m.scoreB ?? 0) : "";
+      return '<button type="button" class="arena-mobile-match" data-mobile-match="' +
+        Number(m.id) + '" data-live="' + playing +
+        '" data-focused="' + (focusId === m.id) +
+        '" aria-label="' + esc(roundNames[m.round] + " " + m.position +
+        ": " + (m.aName || "Por definir") + " contra " +
+        (m.bName || "Por definir") + scoresText + ", " + status) + '">' +
+        '<div class="arena-mobile-match-top"><span>' +
+        (query ? esc(roundNames[m.round]) + " · " : "") +
+        'Partido ' + m.position + '</span><span class="arena-mobile-status">' +
+        status + (playing && Number.isFinite(d.live?.minute) ?
+          " · " + d.live.minute + "'" : "") +
+        '</span></div>' + row(m, "A") + row(m, "B") +
         '<div class="arena-mobile-match-bottom"><span>' +
-        (m.done ? "Resultado definitivo" : m.live ? "Marcador en directo" : "Por disputar") +
-        '</span><span class="arena-mobile-detail">Ver detalle</span></div></button>'
-      ).join("") : '<p class="arena-empty-state">No hay partidos de esta ronda con ese filtro.</p>') +
-      '</div>';
-    if (focus && !mobileFocusHandled) {
-      mobileFocusHandled = true;
-      window.requestAnimationFrame?.(() => {
-        if (window.matchMedia?.("(max-width: 767px)").matches) {
-          const target = mobile.querySelector('[data-mobile-match="' + focus.id + '"]');
-          target?.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      });
+        (m.done ? "Resultado definitivo" : playing ? "Marcador en directo" :
+          "Por disputar") +
+        '</span><span class="arena-mobile-detail">Ver detalle</span></div></button>';
+    };
+    const markup =
+      '<div class="arena-mobile-progress" role="status">' +
+      '<span>Progreso del torneo</span><strong>' + completed + ' de ' +
+      gamesCount + ' partidos</strong><div class="arena-mobile-progress-track">' +
+      '<div style="width:' + percent + '%"></div></div></div>' +
+      (live ? '<button type="button" class="arena-mobile-live-jump" data-mobile-live="true">' +
+        '<span>● EN VIVO · ' + esc(roundNames[live.round]) +
+        ' · ' + esc(live.aName || "Por definir") + ' vs ' +
+        esc(live.bName || "Por definir") +
+        '</span><strong>Ir al partido</strong></button>' : "") +
+      '<div class="arena-mobile-rounds" role="tablist" aria-label="Fase del torneo">' +
+      roundNames.slice(1).map((name, index) => {
+        const round = index + 1;
+        const all = matches.filter((m) => m.round === round);
+        const completedRound = all.filter((m) => m.done).length;
+        return '<button type="button" role="tab" class="arena-mobile-round" ' +
+          'data-mobile-round="' + round + '" aria-controls="arena-mobile-round-results" ' +
+          'tabindex="' + (round === mobileRoundChoice ? "0" : "-1") + '" ' +
+          'aria-selected="' + (round === mobileRoundChoice) + '">' +
+          '<span>' + name + '</span><small>' + completedRound + '/' +
+          (all.length || [0,8,4,2,1][round]) + '</small></button>';
+      }).join("") + '</div>' +
+      '<div class="arena-mobile-round-title"><span>' +
+      (query ? "Resultados en todas las rondas" : roundNames[mobileRoundChoice]) +
+      '</span><span>' + results.length + ' partido' +
+      (results.length === 1 ? "" : "s") + '</span></div>' +
+      '<div id="arena-mobile-round-results" class="arena-mobile-match-list" ' +
+      'role="tabpanel" aria-label="Partidos del torneo">' +
+      (results.length ? results.map(card).join("") :
+        '<p class="arena-mobile-empty-results">' +
+        (query ? "No hay equipos que coincidan con la búsqueda." :
+          "No hay partidos disponibles en esta ronda.") + '</p>') +
+      '</div>' +
+      '<div class="arena-mobile-pager">' +
+      '<button type="button" data-mobile-step="-1" ' +
+      (mobileRoundChoice === 1 ? "disabled " : "") +
+      'aria-label="Ronda anterior">Anterior</button>' +
+      '<button type="button" data-mobile-step="1" ' +
+      (mobileRoundChoice === 4 ? "disabled " : "") +
+      'aria-label="Ronda siguiente">Siguiente</button></div>';
+
+    if (mobile.innerHTML !== markup) {
+      // Preservar el foco de teclado cuando el polling actualiza los marcadores.
+      const active = document.activeElement;
+      const hadFocus = !!(active && mobile.contains?.(active));
+      const focusRound = hadFocus ? active.getAttribute?.("data-mobile-round") : null;
+      const focusMatch = hadFocus ? active.getAttribute?.("data-mobile-match") : null;
+      mobile.innerHTML = markup;
+      const restoreSelector = focusRound ? '[data-mobile-round="' + focusRound + '"]' :
+        focusMatch ? '[data-mobile-match="' + focusMatch + '"]' : null;
+      if (restoreSelector) mobile.querySelector?.(restoreSelector)
+        ?.focus?.({ preventScroll: true });
+    }
+    if (focus && !mobileFocusHandled &&
+        window.matchMedia?.("(max-width: 767px)").matches && !query) {
+      const target = mobile.querySelector?.('[data-mobile-match="' + focus.id + '"]');
+      if (target) {
+        mobileFocusHandled = true;
+        window.requestAnimationFrame?.(() =>
+          target.scrollIntoView?.({ behavior: "smooth", block: "center" }));
+      }
     }
   }
 
@@ -710,6 +827,7 @@
       });
     }
     renderMobileBracket(d);
+    focusBracketOnDesktop(d);
     let zoom = 1;
     const zoomLabel = $("#zoom-level");
     const doZoom = (n) => {
@@ -723,12 +841,14 @@
     let scores = true;
     $("#toggle-scores")?.addEventListener("click", () => {
       scores = !scores;
+      bracketScoresVisible = scores;
       $$(".score-pill", main).forEach((e) => {
         if (!scores) {
           e.dataset.original = e.textContent;
           e.textContent = "—";
         } else e.textContent = e.dataset.original || "—";
       });
+      renderMobileBracket(state.data);
       const label = $("#scores-label");
       if (label)
         label.textContent = scores
@@ -1652,6 +1772,7 @@
       }
     }
     renderMobileBracket(d);
+    focusBracketOnDesktop(d);
   }
 
   /** Consulta periódicamente y sincroniza a todos los espectadores sin recargar. */
