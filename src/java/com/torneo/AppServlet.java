@@ -31,7 +31,7 @@ public final class AppServlet extends HttpServlet {
     private static final String VIEW_FOLDER = "/WEB-INF/views/arena/";
 
     // Sirve para detectar si Tomcat está mostrando un WAR anterior.
-    private static final String UI_RELEASE = "2026-11-25-admin-r3";
+    private static final String UI_RELEASE = "2026-11-25-mobile-r4";
 
     private static final Set<String> ALLOWED_VIEWS =
             Set.of("inicio", "cuadro", "equipos", "admin", "crear", "login", "registro", "partido");
