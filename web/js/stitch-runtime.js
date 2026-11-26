@@ -712,6 +712,14 @@
       title.textContent = d.tournament
         ? `${d.tournament.name} — CUADRO ELIMINATORIO`
         : "CUADRO ELIMINATORIO — 2026";
+    const bracketTitle = $("#arena-bracket-title");
+    if (bracketTitle) bracketTitle.textContent = d.tournament?.name
+      ? d.tournament.name + " · Cuadro eliminatorio" : "Cuadro eliminatorio";
+    const bracketPrize = $("#arena-bracket-prize");
+    if (bracketPrize) bracketPrize.textContent = d.tournament
+      ? "Premio mayor: ₡ " + number(d.tournament.prize) : "Premio por confirmar";
+    const trophyName = $("#arena-bracket-trophy-name");
+    if (trophyName) trophyName.textContent = d.tournament?.name || "Torneo 2026";
     const coords = {
       "M-OCT-L1": [1, 1],
       "M-OCT-L2": [1, 2],
@@ -790,6 +798,10 @@
             );
           });
         } else if (spec[0] === 4) {
+          const firstFinalist = $('[data-arena-finalist="A"]');
+          const secondFinalist = $('[data-arena-finalist="B"]');
+          if (firstFinalist) firstFinalist.textContent = m.aName || "Por definir";
+          if (secondFinalist) secondFinalist.textContent = m.bName || "Por definir";
           const nameSpans = $$("span.truncate", card);
           if (nameSpans[0]) nameSpans[0].textContent = m.aName || "Por definir";
           if (nameSpans[1]) nameSpans[1].textContent = m.bName || "Por definir";
@@ -801,6 +813,10 @@
         const header = $("div.flex.items-center.justify-between span", card);
         if (header)
           header.textContent = `${["", "OCTAVOS", "CUARTOS", "SEMIFINAL", "GRAN FINAL"][m.round]} ${m.position} • ${m.done ? "FINALIZADO" : m.ready ? "LISTO" : "PENDIENTE"}`;
+        const finalBadge = $('[data-arena-final-status]', card);
+        if (finalBadge) finalBadge.textContent =
+          m.live ? "EN VIVO" : m.done ? "FINALIZADO" :
+          m.ready ? "LISTO" : "PENDIENTE";
         const last = $("div.mt-1,div.mt-2", card);
         if (last && spec[0] === 3)
           last.innerHTML = `<span class="text-secondary">${m.done ? "Clasificado: " + esc(card.dataset.winner) : "Camino a la final"}</span><span>${m.done ? "90\u2032" : "Por jugar"}</span>`;
@@ -1762,6 +1778,16 @@
           e.textContent = match.done || match.live
             ? String(side ? match.scoreB : match.scoreA) : "—";
         });
+      }
+      const finalBadge = $('[data-arena-final-status]', card);
+      if (finalBadge) finalBadge.textContent =
+        match.live ? "EN VIVO" : match.done ? "FINALIZADO" :
+        match.ready ? "LISTO" : "PENDIENTE";
+      if (match.round === 4) {
+        const firstFinalist = $('[data-arena-finalist="A"]');
+        const secondFinalist = $('[data-arena-finalist="B"]');
+        if (firstFinalist) firstFinalist.textContent = match.aName || "Por definir";
+        if (secondFinalist) secondFinalist.textContent = match.bName || "Por definir";
       }
       const status = $("div.flex.items-center.justify-between span", card);
       if (status) {
