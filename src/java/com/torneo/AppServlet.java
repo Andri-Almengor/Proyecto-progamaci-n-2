@@ -56,6 +56,7 @@ public final class AppServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
         // Nunca cachear el HTML autenticado. Los recursos estáticos se versionan
         // con un parámetro ?v para evitar conservar estilos/scripts antiguos.
         response.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
@@ -124,8 +125,7 @@ public final class AppServlet extends HttpServlet {
                 request.setAttribute("state", new Store.State());
                 request.setAttribute(
                         "dbError",
-                        "No se pudo conectar con MySQL. Revisá database/schema/torneos.sql "
-                                + "y las variables DB_URL, DB_USER y DB_PASSWORD.");
+                        DB.publicErrorMessage(ex));
             }
         }
 
@@ -330,8 +330,7 @@ public final class AppServlet extends HttpServlet {
             flash(
                     request,
                     "error",
-                    "No se pudo guardar la operación. "
-                            + "Verificá los datos y la conexión MySQL.");
+                    DB.publicErrorMessage(ex));
         }
         response.sendRedirect(path(request, target));
     }

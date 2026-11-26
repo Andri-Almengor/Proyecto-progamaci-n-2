@@ -118,6 +118,20 @@ jobs:
           test "$ready" = "1"
           echo 'STITCH TEST: homepage headline'
           grep -q 'LA GRAN FINAL NACIONAL' /tmp/bracket-home.html
+          # El encabezado compartido y las JSP deben producir bytes UTF-8 reales.
+          curl -fsS -D /tmp/arena-html-headers.txt "$base?view=login" -o /tmp/arena-login-utf8.html
+          python3 - <<'PY'
+          from pathlib import Path
+          header = Path("/tmp/arena-html-headers.txt").read_text(encoding="latin-1")
+          page = Path("/tmp/arena-login-utf8.html").read_bytes().decode("utf-8")
+          home = Path("/tmp/bracket-home.html").read_bytes().decode("utf-8")
+          assert "charset=utf-8" in header.lower(), header
+          assert "INICIAR SESIÓN" in page, "JSP principal no muestra la tilde correctamente"
+          assert "Iniciar sesión" in page, "La inclusión del JSPF tiene caracteres dañados"
+          assert "información y las estadísticas" in home, "La Ñ/tildes del encabezado fallan"
+          for mojibake in ("SESIÃ", "informaciÃ", "Â", "\ufffd"):
+              assert mojibake not in page and mojibake not in home, mojibake
+          PY
           # HTML servido por la versión correcta (no basta comprobar las fuentes del repo).
           curl -fsS -D /tmp/arena-response-headers.txt "$base?view=inicio" -o /tmp/bracket-home.html
           grep -qi '^X-Bracket-Arena-UI: 2026-11-25-navbar-r2' /tmp/arena-response-headers.txt
@@ -208,3 +222,27 @@ jobs:
           grep -q 'bracket-stage' /tmp/stitch-bracket.html
           curl -fsS "$base/app?view=equipos" -o /tmp/stitch-teams.html
           grep -q 'arena-team-form' /tmp/stitch-teams.html
+          # Reproducir un equipo instalado con esquema antiguo: falta la
+          # tabla nueva. El resto del tablero debe seguir consultando MySQL.
+          db_service="${{ job.services.mysql.id }}"
+          docker exec "$db_service" mysql -uroot -pci_password \
+            -e 'DROP TABLE torneos.tournament_live_runs'
+          curl -fsS "$base/arena-data" -o /tmp/stitch-without-live-table.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/stitch-without-live-table.json").read_text())
+          assert data["ok"] is True, data
+          assert isinstance(data["teams"], list)
+          assert data["live"]["migrationRequired"] is True, data["live"]
+          PY
+          docker exec -i "$db_service" mysql -uroot -pci_password \
+            < database/migrations/upgrade_live_tournaments.sql
+          curl -fsS "$base/arena-data" -o /tmp/stitch-after-upgrade.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/stitch-after-upgrade.json").read_text())
+          assert data["ok"] is True, data
+          assert not data["live"].get("migrationRequired"), data["live"]
+          PY

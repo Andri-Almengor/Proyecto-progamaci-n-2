@@ -124,7 +124,30 @@ public final class LiveTournament {
      * lo que el visitante puede conocer en este instante.
      */
     public static Map<String, Object> tick() throws SQLException {
-        return tickAt(Instant.now());
+        try {
+            return tickAt(Instant.now());
+        } catch (SQLException ex) {
+            // En una instalación antigua sin la migración del modo en vivo,
+            // se deben seguir mostrando equipos, torneos y partidos normales.
+            // Solo se deshabilita la transmisión hasta ejecutar la migración.
+            if (isLiveSchemaMissing(ex)) {
+                return obj("mode", "NORMAL", "phase", "NONE",
+                        "migrationRequired", true);
+            }
+            throw ex;
+        }
+    }
+
+    private static boolean isLiveSchemaMissing(SQLException error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql
+                    && sql.getErrorCode() == 1146
+                    && sql.getMessage() != null
+                    && sql.getMessage().contains("tournament_live_runs")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Reloj inyectable para pruebas deterministas sin esperar 20 minutos. */

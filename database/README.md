@@ -132,3 +132,56 @@ El flujo de GitHub Actions verifica que el instalador esté sincronizado y prueb
 La tabla `tournament_live_runs` guarda la secuencia actual, el inicio del encuentro, el siguiente inicio y un plan deportivo determinista. No guarda contraseñas. Las tablas `matches`, `match_simulations`, `match_half_stats` y `match_events` conservan los resultados definitivos.
 
 El modo en vivo tarda aproximadamente **19 minutos y 40 segundos** en disputar los 15 partidos si empieza con los octavos sin interrupciones: 60 segundos por encuentro y 20 segundos entre encuentros. La sesión del administrador puede cerrarse sin detener la secuencia. Para evitar cargas innecesarias, no se mantienen conexiones persistentes con todos los visitantes: cada navegador realiza consultas periódicas al servidor.
+
+
+## Si la página indica que no pudo consultar MySQL
+
+Si el encabezado carga pero el centro muestra **«No se pudieron cargar los datos del torneo»**, consultá primero la URL `http://localhost:8080/BracketArena/arena-data`. Los errores incluyen un código para orientar la solución **sin revelar contraseñas**:
+
+| Código | Posible motivo | Qué revisar |
+|---|---|---|
+| `DB_AUTH` | Usuario/clave rechazados por MySQL | Variables `DB_USER` y `DB_PASSWORD` del proceso de NetBeans/Tomcat |
+| `DB_CONNECTION` | MySQL apagado o servidor/puerto incorrecto | Servicio de MySQL y `DB_URL` |
+| `DB_NOT_FOUND` | No existe la base `torneos` | Crear tablas con `database/schema/torneos.sql` |
+| `DB_SCHEMA` | Falta alguna tabla principal | Aplicar las migraciones del directorio `database/migrations/` |
+| `DB_PERMISSIONS` | Faltan permisos sobre `torneos` | Ejecutar los `GRANT` de `database/setup/usuario_aplicacion.sql` como administrador |
+| `DB_ERROR` | Otro error de JDBC | Ver el registro de excepciones de Tomcat |
+
+**IMPORTANTE:** la tabla `tournament_live_runs` se incorporó después de la creación original del proyecto. La interfaz ahora puede mostrar los equipos y los torneos incluso si falta esa tabla; el administrador verá un aviso y debe ejecutar **`database/migrations/upgrade_live_tournaments.sql`** para habilitar la transmisión en vivo. No se deben borrar ni recrear tablas para corregirlo.
+
+Para comprobar la base en MySQL Workbench:
+
+```sql
+SELECT CURRENT_USER(), @@port;
+SHOW DATABASES LIKE 'torneos';
+USE torneos;
+SHOW TABLES;
+SHOW TABLES LIKE 'tournament_live_runs';
+SELECT COUNT(*) AS equipos FROM teams;
+```
+
+Recordá que **`torneos_app` es el usuario de MySQL**, diferente del administrador de la aplicación web. Si tu usuario MySQL tiene contraseña, `DB_PASSWORD` debe estar disponible para **el proceso que inicia Tomcat**, no únicamente para Workbench. Después de cambiar variables de entorno en Windows, cerrá NetBeans por completo y volvé a abrirlo.
+
+## Tildes, ñ y caracteres especiales (UTF-8)
+
+Las ocho JSP usan `text/html; charset=UTF-8` y el fragmento de encabezado `header.jspf` declara explícitamente UTF-8. También se define UTF-8 para `*.jsp` y `*.jspf` en `web/WEB-INF/web.xml`. Después de actualizar el repositorio, ejecutá **Clean and Build**, reiniciá Tomcat y actualizá el navegador con **Ctrl+Shift+R**. El ajuste evita texto como `INICIAR SESIÃ“N` o `INFORMACIÃ“N`.
+
+No ejecutes `DROP DATABASE` ni vuelvas a cargar los 20 equipos para corregir errores de codificación o credenciales.
+
+### Diagnóstico automático desde PowerShell
+
+Con Tomcat iniciado, abrí PowerShell en la raíz del proyecto:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnosticar-base-datos.ps1
+```
+
+El script consulta la API real de la aplicación e identifica si faltan credenciales, permisos, conexión, base de datos o migración. **No imprime contraseñas ni modifica MySQL**. Si el contexto no es `BracketArena`, especificá `-BaseUrl "http://localhost:8080/OTRO_CONTEXTO"`.
+
+Para validar de forma independiente el usuario MySQL, en Workbench creá una conexión con usuario `torneos_app` y su contraseña, o utilizá la consola de MySQL:
+
+```bash
+mysql -h localhost -P 3306 -u torneos_app -p -D torneos -e "SHOW TABLES;"
+```
+
+El comando te pedirá la contraseña de forma interactiva. Si falla, corregí el usuario de MySQL; si funciona, revisá que **NetBeans/Tomcat** tenga las mismas variables de entorno.

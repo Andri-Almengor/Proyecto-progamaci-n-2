@@ -397,10 +397,12 @@ public final class ArenaDataServlet extends HttpServlet {
         } catch (SQLException ex) {
             log("Error preparando los datos del tablero de Stitch", ex);
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-            response.getWriter()
-                    .write(
-                            "{\"ok\":false,\"error\":\"No se pudo consultar MySQL. "
-                                    + "Verificá DB_URL, DB_USER y DB_PASSWORD.\"}");
+            StringBuilder errorJson = new StringBuilder(384);
+            appendJson(errorJson,
+                    object("ok", false,
+                            "code", DB.publicErrorCode(ex),
+                            "error", DB.publicErrorMessage(ex)));
+            response.getWriter().write(errorJson.toString());
         }
     }
 }

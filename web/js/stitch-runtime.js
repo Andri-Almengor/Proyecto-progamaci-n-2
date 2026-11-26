@@ -1632,6 +1632,20 @@
         throw new Error(data.error || "No fue posible consultar el torneo.");
       state.data = data;
       decorateNav(data);
+      if (data.live?.migrationRequired && data.user?.admin) {
+        // Las instalaciones antiguas pueden consultar los datos, aunque
+        // el administrador todavía no haya aplicado la migración del vivo.
+        const main = $("main");
+        if (main && !$("#arena-live-migration-warning")) {
+          const notice = document.createElement("div");
+          notice.id = "arena-live-migration-warning";
+          notice.className = "arena-flash error";
+          notice.setAttribute("role", "status");
+          notice.textContent = "El torneo funciona, pero falta habilitar el modo en vivo. " +
+            "Ejecutá database/migrations/upgrade_live_tournaments.sql en MySQL Workbench.";
+          main.prepend(notice);
+        }
+      }
       if (page === "home") drawHome(data);
       else if (page === "bracket") drawBracket(data);
       else if (page === "admin") drawAdmin(data);

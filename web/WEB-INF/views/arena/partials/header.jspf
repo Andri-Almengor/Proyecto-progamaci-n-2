@@ -1,3 +1,4 @@
+<%@ page pageEncoding="UTF-8" %>
 <%--
   Barra de navegación compartida por las ocho páginas.
   Los enlaces administrativos se renderizan SOLO cuando el servidor valida ADMIN.
