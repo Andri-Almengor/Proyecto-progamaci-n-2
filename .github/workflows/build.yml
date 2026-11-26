@@ -86,10 +86,11 @@ jobs:
         shell: bash
         run: |
           node --check web/js/stitch-runtime.js
+          node scripts/test-stitch-selectors.cjs
           test -f web/WEB-INF/views/arena/partials/header.jspf
           ! grep -R -q 'SERVIDORES ONLINE' web/WEB-INF/views/arena/
           grep -q 'arena-nav-current' web/WEB-INF/views/arena/partials/header.jspf
-          grep -q 'data-arena-shell="2026-11-25-navbar-r2"' web/WEB-INF/views/arena/partials/header.jspf
+          grep -q 'data-arena-shell="2026-11-25-admin-r3"' web/WEB-INF/views/arena/partials/header.jspf
           grep -q 'arenaHeaderUser.admin()' web/WEB-INF/views/arena/partials/header.jspf
       - name: Compile, test and package
         env:
@@ -134,9 +135,9 @@ jobs:
           PY
           # HTML servido por la versión correcta (no basta comprobar las fuentes del repo).
           curl -fsS -D /tmp/arena-response-headers.txt "$base?view=inicio" -o /tmp/bracket-home.html
-          grep -qi '^X-Bracket-Arena-UI: 2026-11-25-navbar-r2' /tmp/arena-response-headers.txt
-          grep -q 'data-arena-shell="2026-11-25-navbar-r2"' /tmp/bracket-home.html
-          grep -q 'stitch-runtime.js?v=2026-11-25-navbar-r2' /tmp/bracket-home.html
+          grep -qi '^X-Bracket-Arena-UI: 2026-11-25-admin-r3' /tmp/arena-response-headers.txt
+          grep -q 'data-arena-shell="2026-11-25-admin-r3"' /tmp/bracket-home.html
+          grep -q 'stitch-runtime.js?v=2026-11-25-admin-r3' /tmp/bracket-home.html
           sed -n '/<header /,/<\/header>/p' /tmp/bracket-home.html > /tmp/arena-rendered-header.html
           if grep -Eqi 'DATOS ACTUALIZADOS|SIN INICIAR SESI|SERVIDORES ONLINE|Alex Mercer|<select' /tmp/arena-rendered-header.html; then
             echo 'Se detectó el encabezado antiguo en HTML publicado:'
@@ -171,6 +172,14 @@ jobs:
           echo 'STITCH TEST: admin panel'
           grep -q 'Gestor de Inscripciones y Solicitudes' /tmp/bracket-admin.html
           grep -q '/app?view=admin' /tmp/bracket-admin.html
+          python3 - <<'PY'
+          from pathlib import Path
+          page = Path("/tmp/bracket-admin.html").read_bytes().decode("utf-8", errors="strict")
+          assert "Administración" in page, "El encabezado administrativo perdió las tildes"
+          assert "Gestor de Inscripciones y Solicitudes" in page
+          for corrupted in ("ADMINISTRACIÃ", "SesiÃ", "Â", "\ufffd"):
+              assert corrupted not in page, "Caracteres dañados: " + corrupted
+          PY
 
       - name: Smoke-test public match report with statistics
         run: |
@@ -217,7 +226,7 @@ jobs:
           grep -q '.bg-surface' /tmp/stitch-css
           curl -fsS "$base/js/stitch-runtime.js" -o /tmp/stitch-js
           grep -q 'arena-loading' /tmp/stitch-home.html
-          grep -q 'src="/BracketArena/js/stitch-runtime.js?v=2026-11-25-navbar-r2"' /tmp/stitch-home.html
+          grep -q 'src="/BracketArena/js/stitch-runtime.js?v=2026-11-25-admin-r3"' /tmp/stitch-home.html
           curl -fsS "$base/app?view=cuadro" -o /tmp/stitch-bracket.html
           grep -q 'bracket-stage' /tmp/stitch-bracket.html
           curl -fsS "$base/app?view=equipos" -o /tmp/stitch-teams.html

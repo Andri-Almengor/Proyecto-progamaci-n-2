@@ -712,7 +712,7 @@
       if (e) e.textContent = String(value);
     });
     // El contenido de los eventos y comparativas del drawer proviene de los mismos datos persistidos.
-    const timeline = $(".arena-drawer-timeline", drawer) || $("span", drawer)
+    const timeline = $(".arena-drawer-timeline", drawer) || $$("span", drawer)
       .find((e) => e.textContent.includes("14' GOL"))
       ?.closest(".space-y-2");
     if (timeline) timeline.classList.add("arena-drawer-timeline");
@@ -811,7 +811,7 @@
   }
   /** Presenta controles de administración según el rol de usuario. */
   function drawAdmin(d) {
-    const sections = $("main section").filter((element) => element.id !== "arena-live-panel");
+    const sections = $$("main section").filter((element) => element.id !== "arena-live-panel");
     const panel = sections[0],
       batch = sections[1],
       management = sections[2],
@@ -1486,7 +1486,7 @@
    * No reinstala listeners de zoom ni filtros al llegar cada minuto.
    */
   function updateLiveBracket(d) {
-    for (const card of $("[data-real-match-id]", $("main"))) {
+    for (const card of $$("[data-real-match-id]", $("main"))) {
       const match = d.matches.find((m) => m.id === Number(card.dataset.realMatchId));
       if (!match) continue;
       card.dataset.t1 = match.aName || "Por definir";
@@ -1497,13 +1497,13 @@
         ? (match.winnerId === match.aId ? match.aName : match.bName) : "Por definir";
       card.classList.toggle("arena-match-in-play", !!match.live);
       card.classList.toggle("arena-match-pending", !match.done);
-      const rows = $(".team-row", card);
+      const rows = $$(".team-row", card);
       if (rows.length >= 2) {
         rows.slice(0, 2).forEach((row, side) => {
           const name = side ? match.bName : match.aName;
           const id = side ? match.bId : match.aId;
           const score = side ? match.scoreB : match.scoreA;
-          const label = $("span.truncate", row)[0];
+          const label = $("span.truncate", row);
           if (label) label.textContent = name || "Por definir";
           const pill = $(".score-pill", row);
           if (pill) pill.textContent = match.done || match.live ? String(score) : "—";
@@ -1511,10 +1511,10 @@
           row.classList.toggle("arena-bracket-loser", match.done && match.winnerId !== id);
         });
       } else {
-        const names = $("span.truncate", card);
+        const names = $$("span.truncate", card);
         if (names[0]) names[0].textContent = match.aName || "Por definir";
         if (names[1]) names[1].textContent = match.bName || "Por definir";
-        $(".score-pill", card).forEach((e, side) => {
+        $$(".score-pill", card).forEach((e, side) => {
           e.textContent = match.done || match.live
             ? String(side ? match.scoreB : match.scoreA) : "—";
         });
@@ -1559,7 +1559,7 @@
             // Los goles de la transmisión se reflejan en las métricas y
             // tabla de goleadores sin esperar al cierre del encuentro.
             drawLeaders(d, section(5));
-            const cards = $("div.grid > div", section(2));
+            const cards = $$("div.grid > div", section(2));
             const values = [
               d.tournament ? 16 : d.approved,
               d.tournament ? 15 : 0,
@@ -1567,7 +1567,7 @@
               d.totalGoals
             ];
             cards.slice(0, 4).forEach((card, index) => {
-              const labels = $("p", card);
+              const labels = $$("p", card);
               if (labels[1]) labels[1].textContent = number(values[index]);
             });
           }
@@ -1578,7 +1578,7 @@
           if (drawer && !drawer.classList.contains("translate-x-full")) {
             const current = d.matches.find(
               (m) => m.id === Number(drawer.dataset.currentMatchId));
-            const card = current && $("[data-real-match-id]", $("main")).find(
+            const card = current && $$("[data-real-match-id]", $("main")).find(
               (el) => Number(el.dataset.realMatchId) === current.id);
             if (current && card) openMatchDrawer(current, card);
           }
