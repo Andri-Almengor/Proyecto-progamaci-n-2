@@ -101,15 +101,15 @@
 <!-- Control Header & Playback Strip -->
 <div class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
 <div class="flex items-center gap-space-xs">
-<button class="px-space-md py-space-xs rounded bg-primary text-on-primary font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-primary-container transition-all active:scale-95 shadow-sm" id="btn-play" type="button">
+<button class="px-space-md py-space-xs rounded bg-primary text-on-primary font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-primary-container transition-all active:scale-95 shadow-sm" id="btn-play" type="button" aria-label="Reproducir el partido">
 <span class="material-symbols-outlined text-[16px]">play_arrow</span>
 <span id="btn-play-label">Reproducir</span>
 </button>
-<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-pause" type="button">
+<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-pause" type="button" aria-label="Pausar el partido">
 <span class="material-symbols-outlined text-[16px]">pause</span>
 <span>Pausar</span>
 </button>
-<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-reset" type="button">
+<button class="px-space-sm py-space-xs rounded bg-surface text-on-surface font-label-md text-label-md uppercase flex items-center gap-1 hover:bg-surface-container transition-all shadow-sm" id="btn-reset" type="button" aria-label="Reiniciar el partido">
 <span class="material-symbols-outlined text-[16px]">restart_alt</span>
 <span>Reiniciar</span>
 </button>
@@ -134,51 +134,22 @@
 </div>
 <div class="flex items-center gap-3">
 <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary"></span> Gol</span>
-<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Tarjeta</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary-container"></span> Descanso</span>
 <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-surface-container-highest"></span> Cambio</span>
 <span>90:00' Final</span>
 </div>
 </div>
 <!-- Progress Track -->
-<div class="relative w-full h-3 bg-surface-container rounded-full overflow-hidden cursor-pointer" id="progress-track">
+<div class="relative w-full h-3 bg-surface-container rounded-full overflow-hidden cursor-pointer" id="progress-track" role="slider" tabindex="0" aria-label="Buscar minuto del partido" aria-valuemin="0" aria-valuemax="90" aria-valuenow="0" aria-valuetext="Minuto 0 de 90">
 <div class="h-full bg-secondary transition-all duration-100 ease-linear" id="sim-progress-bar" style="width: 0%;"></div>
 </div>
-<!-- Markers Over Progress -->
+<!-- Los botones de gol y cambio se rellenan desde el reporte guardado, sin ejemplos ficticios. -->
 <div class="relative w-full h-4 mt-1 font-label-sm text-label-sm" id="arena-event-markers">
-<!-- 18m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="18" style="left: 20%;" title="18' Gol SAP" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 34m Goal LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="34" style="left: 37.7%;" title="34' Gol LDA" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 42m Yellow LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-on-secondary-fixed-variant text-secondary-fixed flex items-center justify-center hover:scale-125 transition-transform" data-minute="42" style="left: 46.6%;" title="42' Amarilla LDA" type="button">
-<span class="text-[9px] font-bold">Y</span>
-</button>
-<!-- 45m HT -->
-<div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left: 50%;"></div>
-<!-- 63m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="63" style="left: 70%;" title="63' Gol SAP" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 71m Goal LDA -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="71" style="left: 78.8%;" title="71' Gol LDA" type="button">
-<span class="material-symbols-outlined text-[10px]">sports_soccer</span>
-</button>
-<!-- 74m Sub SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center hover:scale-125 transition-transform" data-minute="74" style="left: 82.2%;" title="74' Sustitución" type="button">
-<span class="material-symbols-outlined text-[10px]">sync</span>
-</button>
-<!-- 90+2m Goal SAP -->
-<button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="90" style="left: 98%;" title="90+2' Gol SAP Ganador" type="button">
-<span class="material-symbols-outlined text-[10px]">star</span>
-</button>
+  <div class="absolute -top-3 w-0.5 h-3 bg-primary" style="left:50%" aria-hidden="true"></div>
 </div>
 </div>
 <!-- 2D Tactical Soccer Pitch Schematics -->
-<div id="arena-pitch" class="arena-pitch-field relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none" aria-label="Representación táctica simulada con once jugadores por equipo y balón">
+<div id="arena-pitch" class="arena-pitch-field relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none" aria-label="Representación táctica ilustrativa con once jugadores por equipo, pases, tiros y balón">
 <!-- Pitch Grass Lines SVG -->
 <svg class="absolute inset-0 w-full h-full opacity-30 text-surface" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 1000 600">
 <!-- Outer Line -->
