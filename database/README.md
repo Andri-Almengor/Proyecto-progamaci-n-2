@@ -167,3 +167,21 @@ Recordá que **`torneos_app` es el usuario de MySQL**, diferente del administrad
 Las ocho JSP usan `text/html; charset=UTF-8` y el fragmento de encabezado `header.jspf` declara explícitamente UTF-8. También se define UTF-8 para `*.jsp` y `*.jspf` en `web/WEB-INF/web.xml`. Después de actualizar el repositorio, ejecutá **Clean and Build**, reiniciá Tomcat y actualizá el navegador con **Ctrl+Shift+R**. El ajuste evita texto como `INICIAR SESIÃ“N` o `INFORMACIÃ“N`.
 
 No ejecutes `DROP DATABASE` ni vuelvas a cargar los 20 equipos para corregir errores de codificación o credenciales.
+
+### Diagnóstico automático desde PowerShell
+
+Con Tomcat iniciado, abrí PowerShell en la raíz del proyecto:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnosticar-base-datos.ps1
+```
+
+El script consulta la API real de la aplicación e identifica si faltan credenciales, permisos, conexión, base de datos o migración. **No imprime contraseñas ni modifica MySQL**. Si el contexto no es `BracketArena`, especificá `-BaseUrl "http://localhost:8080/OTRO_CONTEXTO"`.
+
+Para validar de forma independiente el usuario MySQL, en Workbench creá una conexión con usuario `torneos_app` y su contraseña, o utilizá la consola de MySQL:
+
+```bash
+mysql -h localhost -P 3306 -u torneos_app -p -D torneos -e "SHOW TABLES;"
+```
+
+El comando te pedirá la contraseña de forma interactiva. Si falla, corregí el usuario de MySQL; si funciona, revisá que **NetBeans/Tomcat** tenga las mismas variables de entorno.
