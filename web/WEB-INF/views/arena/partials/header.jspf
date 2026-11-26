@@ -9,7 +9,7 @@
   String arenaHeaderView = (String) request.getAttribute("view");
   if (arenaHeaderView == null) arenaHeaderView = "inicio";
 %>
-<header data-arena-shell="2026-11-25-mobile-r4" class="arena-ui-header fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+<header data-arena-shell="2026-11-26-tactics-r5" class="arena-ui-header fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
   <div class="arena-header-top">
     <a class="arena-brand flex items-center gap-space-sm group" href="<%=request.getContextPath()%>/app?view=inicio">
       <span class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
