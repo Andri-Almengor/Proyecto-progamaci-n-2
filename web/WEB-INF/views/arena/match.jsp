@@ -144,7 +144,7 @@
 <div class="h-full bg-secondary transition-all duration-100 ease-linear" id="sim-progress-bar" style="width: 0%;"></div>
 </div>
 <!-- Markers Over Progress -->
-<div class="relative w-full h-4 mt-1 font-label-sm text-label-sm">
+<div class="relative w-full h-4 mt-1 font-label-sm text-label-sm" id="arena-event-markers">
 <!-- 18m Goal SAP -->
 <button class="marker-btn absolute -top-4 -ml-2 w-4 h-4 rounded-full bg-secondary text-white flex items-center justify-center hover:scale-125 transition-transform" data-minute="18" style="left: 20%;" title="18' Gol SAP" type="button">
 <span class="material-symbols-outlined text-[10px]">sports_soccer</span>
@@ -178,7 +178,7 @@
 </div>
 </div>
 <!-- 2D Tactical Soccer Pitch Schematics -->
-<div class="relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none">
+<div id="arena-pitch" class="arena-pitch-field relative w-full aspect-[16/9] bg-primary rounded-xl overflow-hidden shadow-lg flex items-center justify-center select-none" aria-label="Representación táctica simulada con once jugadores por equipo y balón">
 <!-- Pitch Grass Lines SVG -->
 <svg class="absolute inset-0 w-full h-full opacity-30 text-surface" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 1000 600">
 <!-- Outer Line -->
@@ -212,8 +212,8 @@
 <div class="absolute right-1/6 bottom-1/3 w-80 h-52 rounded-full bg-secondary/30 blur-3xl"></div>
 </div>
 <!-- Team Labels on Field -->
-<div class="absolute left-6 top-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase">Saprissa (Local)</div>
-<div class="absolute right-6 bottom-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase">Alajuelense (Visita)</div>
+<div class="absolute left-6 top-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase" data-pitch-home>Saprissa (Local)</div>
+<div class="absolute right-6 bottom-6 font-headline-md text-headline-md tracking-wider text-surface/20 uppercase" data-pitch-away>Alajuelense (Visita)</div>
 <!-- Dynamic Ball Node -->
 <div class="absolute w-6 h-6 rounded-full bg-surface shadow-[0_0_15px_rgba(255,255,255,0.9)] flex items-center justify-center transition-all duration-700 ease-out transform -translate-x-1/2 -translate-y-1/2 z-20" id="ball-actor" style="left: 50%; top: 50%;">
 <div class="w-3 h-3 rounded-full bg-primary flex items-center justify-center">
@@ -475,4 +475,4 @@
 </footer>
 </div>
 <!-- Simulation Script Logic -->
-</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-25-admin-r3"></script></body></html>
+</main><footer class="w-full bg-surface-container-low py-space-xl mt-space-xl"><div class="w-full px-margin flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-6 h-6 rounded bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[14px]">emoji_events</span></div><span class="font-headline-md text-headline-md uppercase text-on-surface">BRACKET ARENA</span></div><div class="font-body-sm text-body-sm text-on-surface-variant text-center">© 2026 Bracket Arena Technologies. Sistema Profesional de Gestión de Torneos Eliminatorios.</div><div class="flex items-center gap-space-md font-label-sm text-label-sm text-on-surface-variant uppercase"><a class="hover:text-on-surface transition-colors" href="#">Reglamento</a><a class="hover:text-on-surface transition-colors" href="#">Soporte</a><a class="hover:text-on-surface transition-colors" href="#">API Torneo</a></div></div></footer><script>window.ARENA_BASE = '<%=request.getContextPath()%>';</script><script defer src="<%=request.getContextPath()%>/js/arena-pitch.js?v=2026-11-25-mobile-r4"></script><script defer="" src="<%=request.getContextPath()%>/js/stitch-runtime.js?v=2026-11-25-admin-r3"></script></body></html>
