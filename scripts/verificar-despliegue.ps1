@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$expected = '2026-11-25-navbar-r2'
+$expected = '2026-11-25-admin-r3'
 Write-Host ''
 Write-Host 'BRACKET ARENA - Verificador del encabezado publicado' -ForegroundColor Cyan
 Write-Host ('URL consultada: ' + $Url)
