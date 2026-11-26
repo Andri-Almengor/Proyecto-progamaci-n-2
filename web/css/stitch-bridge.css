@@ -1085,3 +1085,86 @@ html.dark footer {
   .arena-mobile-progress-track > div,
   .arena-mobile-match { transition: none !important; }
 }
+
+
+/* ETAPA 3 FINAL — claridad visual de los pases, disputas y goles.
+   Las animaciones son un replay ilustrativo; el marcador es el almacenado. */
+.arena-pitch-field [data-pitch-home],
+.arena-pitch-field [data-pitch-away] { display: none; }
+.arena-pitch-player {
+  transition-property: left, top, box-shadow;
+  transition-timing-function: linear;
+  will-change: left, top;
+}
+.arena-pitch-player[data-active="true"] {
+  border-color: #fffdf1;
+  box-shadow: 0 0 0 3px rgba(255,246,172,.35), 0 0 13px 2px #ffe47f;
+}
+.arena-pitch-ball {
+  display: grid;
+  place-items: center;
+  background: none !important;
+  box-shadow: none !important;
+  transition-property: left, top !important;
+  transition-timing-function: linear !important;
+  will-change: left, top;
+}
+.arena-pitch-ball[data-flight="true"] {
+  filter: drop-shadow(0 0 6px #fff3ad);
+}
+#ball-vector-trail {
+  stroke: rgba(255,226,123,.8);
+  stroke-width: 2.7;
+}
+.arena-pitch-moment {
+  position: absolute;
+  z-index: 24;
+  inset: auto 0 23%;
+  text-align: center;
+  font: 900 clamp(1.2rem,4.8vw,3.2rem)/1.1 "Space Grotesk", Inter, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #ffe185;
+  text-shadow: 0 3px 12px #081b13,0 0 28px rgba(255,192,53,.6);
+  transform: scale(.85) translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.arena-pitch-moment[data-visible="true"] {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+.arena-pitch-field[data-possession="A"] .arena-pitch-legend span:first-child,
+.arena-pitch-field[data-possession="B"] .arena-pitch-legend span:nth-child(2) {
+  color: #ffda79;
+}
+.arena-pitch-field[data-possession="A"] .arena-pitch-legend span:nth-child(2),
+.arena-pitch-field[data-possession="B"] .arena-pitch-legend span:first-child {
+  opacity: .7;
+}
+#progress-track[role="slider"] { touch-action: manipulation; }
+#progress-track[role="slider"]:focus-visible {
+  outline: 3px solid #d97706;
+  outline-offset: 5px;
+}
+.arena-replay-marker:focus-visible {
+  outline: 2px solid #f8a922;
+  outline-offset: 2px;
+  z-index: 5;
+}
+@media (max-width: 767px) {
+  .arena-pitch-moment {
+    font-size: clamp(1.15rem, 6vw, 2.1rem);
+    bottom: 26%;
+  }
+  .arena-pitch-legend { max-width: 72%; }
+  .arena-pitch-field #tactical-state { overflow-wrap: anywhere; }
+  #arena-event-markers .arena-replay-marker { width: 17px; height: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-pitch-moment, .arena-pitch-player, .arena-pitch-ball {
+    transition: none !important; animation: none !important;
+    will-change: auto;
+  }
+}
